@@ -2,9 +2,49 @@
 
 Mermaid rendering and fonts are compiled into peep. The native executable needs no Go, Node, browser, or separate `mmdg` installation. The npm launcher requires Node 22+. macOS and Linux on arm64/amd64 are supported.
 
-Homebrew, npm, and AUR packages are being prepared; see [channel names and release setup](distribution.md). Until the first channel release is published, use a source build or release archive.
+## Package managers
 
-From an extracted peep archive:
+```sh
+# Homebrew (macOS / Linux): includes FFmpeg and mpv
+brew install lancekrogers/tap/peep
+
+# npm (macOS / Linux, Node 22+)
+npm install -g @obedience-corp/peep
+
+# AUR (Arch Linux): includes FFmpeg and mpv
+yay -S peep-tui-bin
+# or: paru -S peep-tui-bin
+```
+
+For npm installs, install the media tools separately:
+
+```sh
+brew install ffmpeg mpv               # macOS / Homebrew Linux
+sudo apt install ffmpeg mpv           # Debian / Ubuntu
+sudo pacman -S ffmpeg mpv             # Arch Linux
+```
+
+Upgrade through the same package manager. Use `command -v peep` to check which
+installation your shell runs if you have installed peep through multiple methods.
+
+## Open peep
+
+```sh
+peep                   # Browse the current directory
+peep ~/Pictures        # Browse a directory
+peep README.md         # Preview a file
+peep --play movie.mp4   # Start media playback
+peep --doctor          # Check media dependencies and terminal support
+```
+
+`peep <path>` accepts a file or directory. Quote paths containing spaces, for example
+`peep "$HOME/My Pictures"`.
+
+## Release archive
+
+Download the archive for your OS and architecture from
+[GitHub Releases](https://github.com/lancekrogers/peep/releases/latest) and verify
+its SHA-256 against `checksums.txt`. From the extracted archive:
 
 ```sh
 ./bin/peep --install                  # defaults to ~/.local; installs missing media tools
@@ -16,6 +56,8 @@ From an extracted peep archive:
 The installer uses Homebrew on macOS or apt-get/dnf/pacman on Linux for missing FFmpeg/mpv tools. It may request sudo through the package manager. If the manager or packages are unavailable, installation reports the failure before replacing peep. `--no-deps` still supports documents and Mermaid diagrams; media features require their tools.
 
 Installation stages and verifies a versioned executable, then atomically updates `<prefix>/bin/peep`. Old versions remain available to running processes. Use the same command for upgrades. Add `<prefix>/bin` to PATH and check `command -v peep` if an older Go-bin installation takes precedence.
+
+## Build from source
 
 Building from source requires **Go 1.27+** and `just`:
 
