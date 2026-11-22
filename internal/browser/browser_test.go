@@ -20,7 +20,7 @@ func TestRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(entries) != 3 || !entries[0].Dir || entries[1].Name != "a.PNG" {
+	if len(entries) != 4 || !entries[0].Dir || entries[1].Name != "a.PNG" {
 		t.Fatalf("unexpected listing: %+v", entries)
 	}
 	entries, err = Read(dir, true, "HIDDEN")

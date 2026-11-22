@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lancekrogers/peep/internal/document"
 	"github.com/lancekrogers/peep/internal/media"
 	"github.com/lancekrogers/peep/internal/render"
 )
@@ -41,6 +42,9 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 			e := m.entries[i]
 			name = e.Name
 			kind = string(e.Kind)
+			if kind == "" {
+				kind = document.Kind(e.Path)
+			}
 			if e.Dir {
 				kind = "DIR"
 				name += "/"
@@ -65,7 +69,7 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 		out[y] = row
 	}
 	if count == 0 {
-		label := "No media found"
+		label := "No files found"
 		if m.filter != "" {
 			label = "No matches · Esc clears search"
 		}
@@ -75,6 +79,9 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 }
 func (m *Model) previewRows(w, h int) []string {
 	out := make([]string, h)
+	if m.doc != nil {
+		return m.documentRows(w, h)
+	}
 	if m.displayingActive && m.active.Kind == media.Audio {
 		return m.spectrumRows(w, h)
 	}
@@ -123,7 +130,7 @@ func (m *Model) previewRows(w, h int) []string {
 	return out
 }
 func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
+	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
 		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
 	return rows
 }
@@ -153,6 +160,9 @@ func (m *Model) View() string {
 	if m.showQueue {
 		mode = "QUEUE"
 	}
+	if m.doc != nil && m.focus {
+		mode = "READ"
+	}
 	if m.timeline {
 		mode = "TIMELINE"
 	}
@@ -173,6 +183,9 @@ func (m *Model) View() string {
 		}
 		if l.preview > 0 {
 			title := "Preview"
+			if m.doc != nil {
+				title = m.documentTitle()
+			}
 			if m.displayingActive {
 				title = "Now Playing"
 			}
@@ -234,6 +247,9 @@ func (m *Model) View() string {
 	}
 	add(controls)
 	status := "Ready · / or Ctrl+F search files & folders · Enter open/play"
+	if m.doc != nil {
+		status = "Enter/f read · PgUp/PgDn scroll · R source/rendered · Esc back"
+	}
 	if m.filter != "" || m.filtering {
 		status = "Filter: " + render.Safe(m.filter)
 	} else if m.notice != "" {

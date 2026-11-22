@@ -21,3 +21,8 @@ test-integration: fixtures
 # Exercise the real TUI in a PTY with synthetic fixtures.
 test-tui: build fixtures
     python3 scripts/tui-smoke.py
+    python3 scripts/document-smoke.py
+
+# Focused document-preview acceptance, including playback while reading.
+test-documents: build fixtures
+    python3 scripts/document-smoke.py

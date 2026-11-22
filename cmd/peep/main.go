@@ -15,7 +15,7 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.1.4-dev"
+const version = "0.2.0-dev"
 
 func run() error {
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
