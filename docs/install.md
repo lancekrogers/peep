@@ -1,6 +1,8 @@
 # Installation
 
-Mermaid rendering and fonts are compiled into peep. A packaged executable needs no Go, Node, browser, or separate `mmdg` installation. macOS and Linux on arm64/amd64 are supported.
+Mermaid rendering and fonts are compiled into peep. The native executable needs no Go, Node, browser, or separate `mmdg` installation. The npm launcher requires Node 22+. macOS and Linux on arm64/amd64 are supported.
+
+Homebrew, npm, and AUR packages are being prepared; see [channel names and release setup](distribution.md). Until the first channel release is published, use a source build or release archive.
 
 From an extracted peep archive:
 
@@ -31,7 +33,7 @@ just package-all                   # macOS/Linux × arm64/amd64 archives
 ./bin/peep --renderer=cells ~/Pictures
 ```
 
-Package archives contain one executable, README, documentation, the Night Shift demo collection, and renderer notices. Open the included collection with `./bin/peep examples/night-shift/00-start-here.md`; the `just demo` recipe is available in source checkouts. `--licenses` displays those notices from the executable itself. CI builds host packages and checks installation/rendering without a helper or language toolchain on PATH; publishing a release is a separate action.
+Package archives contain one executable, README, documentation, the Night Shift demo collection, the MIT license, and renderer notices. Open the included collection with `./bin/peep examples/night-shift/00-start-here.md`; the `just demo` recipe is available in source checkouts. `--licenses` displays those notices from the executable itself. CI builds host packages and checks installation/rendering without a helper or language toolchain on PATH; publishing a release is a separate action.
 
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 

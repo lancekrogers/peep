@@ -56,7 +56,7 @@ func run() error {
 	files := []struct {
 		from, to string
 		mode     int64
-	}{{binary, "bin/peep", 0755}, {"README.md", "README.md", 0644}, {"internal/diagram/notices/MMDG-LICENSE.txt", "licenses/MMDG-LICENSE.txt", 0644}, {"internal/diagram/notices/MMDG-NOTICES.txt", "licenses/MMDG-NOTICES.txt", 0644}}
+	}{{binary, "bin/peep", 0755}, {"README.md", "README.md", 0644}, {"LICENSE", "LICENSE", 0644}, {"internal/diagram/notices/MMDG-LICENSE.txt", "licenses/MMDG-LICENSE.txt", 0644}, {"internal/diagram/notices/MMDG-NOTICES.txt", "licenses/MMDG-NOTICES.txt", 0644}}
 	for _, file := range files {
 		if err = add(tw, file.from, file.to, file.mode); err != nil {
 			tw.Close()

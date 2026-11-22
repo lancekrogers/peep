@@ -19,3 +19,5 @@ The optional `just demo-assets` authoring recipe regenerates original demo art, 
 Use feature branches and ready-for-review pull requests. Do not commit generated test fixtures, binaries, or terminal transcripts. Curated demo media in `examples/night-shift` is intentionally versioned.
 
 See [architecture](architecture.md) and [verification](verification.md).
+
+Release packaging and channel setup: [distribution](distribution.md).

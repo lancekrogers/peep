@@ -7,3 +7,5 @@ import 'just/demo.just'
 
 default:
     @just --list
+
+import 'just/distribution.just'
