@@ -1,0 +1,6 @@
+{
+  "repository": "lancekrogers/peep",
+  "npmName": "@lancekrogers/peep",
+  "aurName": "peep-tui-bin",
+  "license": "MIT"
+}
