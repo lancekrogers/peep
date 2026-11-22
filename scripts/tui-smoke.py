@@ -141,6 +141,12 @@ try:
     assert b'\xe2\x96\x80' not in s.log, 'native preview fell back to cells'
     s.send(b'?');s.expect(b'a=d,d=I');s.send(b'?');s.expect(b'a=t,f=100')
     s.resize(90,25);s.expect(b'a=p,');s.finish()
+    s=Session('native-video','--renderer=kitty','--play','tmp/fixtures/03-video.mp4');sessions.append(s)
+    s.expect(b'[Playing]');s.expect(b'00:01 / 00:08')
+    assert s.log.count(b'a=t,f=100')>=2, 'native video did not advance frames'
+    assert b'\xe2\x96\x80' not in s.log, 'native video used cell pixels'
+    s.send(b' ');s.expect(b'[Paused]');s.send(b']');s.expect(b'00:06 / 00:08')
+    s.send(b's');s.expect(b'[Stopped] 00:00');s.finish()
     s=Session('mixed','--play','tmp/fixtures/01-image.png','tmp/fixtures/02-animation.gif','tmp/fixtures/03-video.mp4','tmp/fixtures/04-audio.wav');sessions.append(s)
     s.expect(b'[Playing]');s.expect(b'NOW PLAYING  02-animation.gif',timeout=8)
     s.expect(b'NOW PLAYING  03-video.mp4',timeout=6)

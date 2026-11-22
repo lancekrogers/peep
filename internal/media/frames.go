@@ -12,6 +12,7 @@ import (
 const FPS = 12.0
 
 type Frame struct {
+	PNG           []byte
 	RGB           []byte
 	Width, Height int
 	Time          float64

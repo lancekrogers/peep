@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Renderer selects native still-image graphics only on known direct terminals.
@@ -35,6 +36,8 @@ type Placement struct{ X, Y, Columns, Rows int }
 // image commands, places images after text, and removes owned images on exit.
 // Fd preserves Bubble Tea's TTY-size detection when using this output wrapper.
 type KittyWriter struct {
+	timer                     *time.Timer
+	drawn                     Placement
 	out                       io.Writer
 	fd                        uintptr
 	mu                        sync.Mutex
@@ -56,11 +59,27 @@ func (w *KittyWriter) Set(png []byte, key int, rect Placement, visible bool) {
 	w.key = key
 	w.rect = rect
 	w.visible = visible && len(png) > 0 && rect.Columns > 0 && rect.Rows > 0
+	if !w.closed && w.timer == nil && w.needsDraw() {
+		w.timer = time.AfterFunc(25*time.Millisecond, func() {
+			w.mu.Lock()
+			defer w.mu.Unlock()
+			w.timer = nil
+			if !w.closed && w.needsDraw() {
+				_, _ = w.writeLocked(nil)
+			}
+		})
+	}
 }
 func (w *KittyWriter) remove() string { return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", w.imageID) }
+func (w *KittyWriter) needsDraw() bool {
+	return (w.uploaded && (!w.visible || w.sent != w.key || w.drawn != w.rect)) || (w.visible && (!w.uploaded || w.sent != w.key || w.drawn != w.rect))
+}
 func (w *KittyWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	return w.writeLocked(p)
+}
+func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 	if bytes.Contains(p, []byte("\x1b[?1049h")) {
 		w.closed = false
 	}
@@ -70,6 +89,7 @@ func (w *KittyWriter) Write(p []byte) (int, error) {
 		w.closed = true
 	}
 	var buf bytes.Buffer
+	buf.WriteString("\x1b[?2026h")
 	if w.uploaded && (!w.visible || w.sent != w.key) {
 		buf.WriteString(w.remove())
 		w.uploaded = false
@@ -82,9 +102,11 @@ func (w *KittyWriter) Write(p []byte) (int, error) {
 			w.sent = w.key
 		}
 		r := w.rect
+		w.drawn = r
 		// Save/restore cursor; C=1 prevents placement from advancing or scrolling it.
 		fmt.Fprintf(&buf, "\x1b7\x1b[%d;%dH\x1b_Ga=p,i=%d,p=1,c=%d,r=%d,C=1,z=1,q=2\x1b\\\x1b8", r.Y+1, r.X+1, w.imageID, r.Columns, r.Rows)
 	}
+	buf.WriteString("\x1b[?2026l")
 	if _, err := w.out.Write(buf.Bytes()); err != nil {
 		return 0, err
 	}
@@ -120,6 +142,10 @@ func (w *KittyWriter) Close() error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.closed = true
+	if w.timer != nil {
+		w.timer.Stop()
+		w.timer = nil
+	}
 	if w.uploaded {
 		w.uploaded = false
 		_, err := io.WriteString(w.out, w.remove())

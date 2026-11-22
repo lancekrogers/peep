@@ -124,3 +124,30 @@ func TestNativePreviewPreservesPixels(t *testing.T) {
 		t.Fatal("bad native preview accepted")
 	}
 }
+
+func TestNativeVideoPreservesDetail(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("integration")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	frames := NativeFrames(ctx, "../../tmp/fixtures/08-detail.mp4", 0)
+	f := <-frames
+	if f.Err != nil {
+		t.Fatal(f.Err)
+	}
+	cfg, err := png.DecodeConfig(bytes.NewReader(f.PNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 1280 || cfg.Height != 720 {
+		t.Fatalf("video reduced to %dx%d", cfg.Width, cfg.Height)
+	}
+	second := <-frames
+	if second.Err != nil || second.Time <= f.Time {
+		t.Fatal("native video clock did not advance")
+	}
+	cancel()
+	for range frames {
+	}
+}

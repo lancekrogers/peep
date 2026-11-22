@@ -14,14 +14,14 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.1.2-dev"
+const version = "0.1.3-dev"
 
 func run() error {
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
 	play := flags.Bool("play", false, "start playback explicitly")
 	doctor := flags.Bool("doctor", false, "report media dependencies")
 	showVersion := flags.Bool("version", false, "show version")
-	renderer := flags.String("renderer", "auto", "still-image renderer: auto, kitty, or cells")
+	renderer := flags.String("renderer", "auto", "image/video renderer: auto, kitty, or cells")
 	audio := flags.String("audio-output", "", "mpv audio output override (null for automated tests)")
 	flags.Usage = func() {
 		fmt.Fprint(flags.Output(), "peep — terminal pictures, GIFs, videos, and music\n\nUsage: peep [flags] [directory | media files...]\n")
@@ -43,7 +43,7 @@ func run() error {
 	}
 	if *doctor {
 		missing := false
-		fmt.Println("peep", version, "· still-image renderer:", mode, "· moving playback: cells")
+		fmt.Println("peep", version, "· image/video renderer:", mode)
 		for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
 			path, err := exec.LookPath(name)
 			if err != nil {

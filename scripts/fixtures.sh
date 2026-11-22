@@ -11,3 +11,5 @@ mkdir -p tmp/fixtures/folder
 ffmpeg -v error -y -i tmp/fixtures/01-image.png -frames:v 1 tmp/fixtures/06-photo.jpg
 
 ffmpeg -v error -y -f lavfi -i 'testsrc2=size=1200x800:rate=1' -frames:v 1 tmp/fixtures/07-detail.jpg
+
+ffmpeg -v error -y -f lavfi -i 'testsrc2=size=1280x720:rate=12:duration=2' -c:v mpeg4 -q:v 5 tmp/fixtures/08-detail.mp4

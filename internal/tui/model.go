@@ -56,6 +56,7 @@ type Model struct {
 	startState                                string
 	graphics                                  *render.KittyWriter
 	nativePNG                                 []byte
+	nativeRevision                            int
 	previewError                              string
 	timeline                                  bool
 	ctx                                       context.Context
@@ -195,8 +196,12 @@ func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd
 		id, path := m.previewID, info.Path
 		return func() tea.Msg { png, err := media.PreviewPNG(ctx, path); return nativeMsg{id, png, err} }
 	}
-	w, h := m.dimensions()
-	m.frames = media.Frames(ctx, info.Path, w, h, start, !active || info.Kind == media.Image || info.Kind == media.Audio)
+	if m.graphics != nil {
+		m.frames = media.NativeFrames(ctx, info.Path, start)
+	} else {
+		w, h := m.dimensions()
+		m.frames = media.Frames(ctx, info.Path, w, h, start, !active || info.Kind == media.Image || info.Kind == media.Audio)
+	}
 	return m.nextFrame()
 }
 func (m *Model) nextFrame() tea.Cmd {
@@ -383,6 +388,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.nativePNG = v.png
+		m.nativeRevision++
 	case frameMsg:
 		if v.id != m.previewID {
 			return m, nil
@@ -398,7 +404,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if !m.displayingActive || m.active.Kind == media.Image || m.active.Kind == media.Audio || v.frame.Time <= m.position+0.08 {
-			m.rows = render.Cells(v.frame)
+			m.showFrame(v.frame)
 			return m, m.nextFrame()
 		}
 		m.pending = &v.frame
@@ -494,7 +500,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			cmds = append(cmds, m.nextSpectrum())
 		}
 		if m.pending != nil && m.pending.Time <= m.position+0.08 {
-			m.rows = render.Cells(*m.pending)
+			m.showFrame(*m.pending)
 			m.pending = nil
 			cmds = append(cmds, m.nextFrame())
 		}
@@ -529,7 +535,7 @@ func (m *Model) syncGraphics() {
 		x += l.files + 1
 	}
 	visible := !m.help && l.preview > 0 && m.width >= 35 && m.height >= 12
-	m.graphics.Set(m.nativePNG, m.previewID, render.Placement{X: x, Y: 3, Columns: l.preview - 2, Rows: l.body}, visible)
+	m.graphics.Set(m.nativePNG, m.nativeRevision, render.Placement{X: x, Y: 3, Columns: l.preview - 2, Rows: l.body}, visible)
 }
 
 func (m *Model) refilter() tea.Cmd {
@@ -552,4 +558,14 @@ func (m *Model) refilter() tea.Cmd {
 		}
 	}
 	return m.previewSelection()
+}
+
+func (m *Model) showFrame(f media.Frame) {
+	if len(f.PNG) > 0 {
+		m.nativePNG = f.PNG
+		m.nativeRevision++
+		m.rows = nil
+	} else {
+		m.rows = render.Cells(f)
+	}
 }

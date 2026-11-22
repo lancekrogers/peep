@@ -2,7 +2,7 @@
 
 A terminal file explorer for pictures, animated GIFs, videos, and music.
 
-Browse silently, press Enter to play, and keep browsing while the current item continues. Still previews use native Kitty graphics automatically in direct Ghostty/Kitty sessions, preserving images up to 2048 pixels per dimension. Other terminals use ANSI color cells. Video and animated GIF playback currently use the 12 fps cell renderer.
+Browse silently, press Enter to play, and keep browsing while the current item continues. Still previews use native Kitty graphics automatically in direct Ghostty/Kitty sessions, preserving images up to 2048 pixels per dimension. Other terminals use ANSI color cells. Video and animated GIF playback also use native graphics on that path, preserving up to 1920 × 1080 pixels at a 12 fps target. The color-cell renderer remains the compatibility fallback.
 
 ## Install and run
 

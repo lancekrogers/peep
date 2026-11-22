@@ -37,3 +37,7 @@ Added a 1200 x 800 JPEG fixture and verified that its native PNG payload retains
 Folder layout tests ensure that empty preview space is reclaimed, long-name browsing remains available via `B`, and cached fuzzy filtering works without another directory read. PTY checks exercise Ctrl+F search and opening a matched folder. Existing playback, JPEG, mouse/timeline, race, and cleanup checks remain in the suite.
 
 Spectrum tests distinguish silence, a low-frequency tone, and a high-frequency tone; exercise real PCM extraction with seek timestamps and cancellation; and check paused/stopped display behavior. The PTY audio session checks that real spectrum bars are emitted during playback. Null audio output remains the automated playback device.
+
+## Native moving playback
+
+Added a 1280 × 720 video fixture and verified that native PNG frames retain its dimensions and advance timestamps. Compositor tests ensure changed graphics are flushed without requiring a text redraw. The native-video PTY session checks repeated uploads, absence of cell pixels, play/pause, seek, stop, and cleanup. This verifies the transport and protocol; it does not substitute for visual inspection in the user's terminal.
