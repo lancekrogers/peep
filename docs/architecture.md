@@ -66,6 +66,6 @@ Source is limited to 128 KiB, intermediate SVG to 8 MiB, stdout to 20 MiB, stder
 
 ## FPS and terminal lifecycle
 
-`F` restarts only the visual decoder at the current media position, preserving the last displayed image while it seeks. Native FPS counts completed new-frame writes over the last second; placement-only redraws do not increment it. Cell FPS counts frames accepted for rendering. Neither is a measurement of physical display refresh.
+Visible playing video uses a 60 Hz scheduling tick and native refresh can flush at up to 60 Hz; other content retains the 20 Hz UI tick. `F` restarts only the visual decoder at the current media position, preserving the last displayed image while it seeks. Native FPS counts completed new-frame writes over the last second; placement-only redraws do not increment it. Cell FPS counts frames accepted for rendering. Neither is a measurement of physical display refresh.
 
 The command owns SIGINT, SIGTERM and SIGHUP through the shared context, including while Bubble Tea releases the terminal to an editor. Editors receive actual stdin/stdout/stderr file descriptors so os/exec does not turn graphics/probe wrappers into pipes. After the UI and graphics writer close, a final cleanup resets terminal modes and restores the saved termios state. SIGKILL cannot be handled.

@@ -160,8 +160,16 @@ func New(ctx context.Context, p *player.Player, paths []string, play bool, notic
 	}
 	return m, nil
 }
-func tick() tea.Cmd            { return tea.Tick(time.Second/20, func(t time.Time) tea.Msg { return tickMsg(t) }) }
-func (m *Model) Init() tea.Cmd { return tea.Batch(m.readDir(), tick()) }
+func (m *Model) tick() tea.Cmd {
+	interval := time.Second / 20
+	if m.clockedVideo() && m.state == "Playing" {
+		// Schedule against the media clock more frequently than the requested
+		// frames, instead of silently limiting 24/30/60 FPS video to 20 FPS.
+		interval = time.Second / 60
+	}
+	return tea.Tick(interval, func(t time.Time) tea.Msg { return tickMsg(t) })
+}
+func (m *Model) Init() tea.Cmd { return tea.Batch(m.readDir(), m.tick()) }
 func (m *Model) readDir() tea.Cmd {
 	m.listID++
 	id, path, hidden := m.listID, m.dir, m.hidden
@@ -548,17 +556,17 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.position = m.duration
 				m.state = "Ended"
 				if m.repeat == 1 {
-					return m, tea.Batch(tick(), m.load(m.index))
+					return m, tea.Batch(m.tick(), m.load(m.index))
 				}
 				if m.index+1 < len(m.queue) {
-					return m, tea.Batch(tick(), m.load(m.index+1))
+					return m, tea.Batch(m.tick(), m.load(m.index+1))
 				}
 				if m.repeat == 2 && len(m.queue) > 0 {
-					return m, tea.Batch(tick(), m.load(0))
+					return m, tea.Batch(m.tick(), m.load(0))
 				}
 			}
 		}
-		cmds := []tea.Cmd{tick()}
+		cmds := []tea.Cmd{m.tick()}
 		if hadTransport != m.transportVisible() {
 			m.timeline = false
 			cmds = append(cmds, m.requestDocumentImages())

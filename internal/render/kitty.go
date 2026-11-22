@@ -60,7 +60,7 @@ func (w *KittyWriter) Set(png []byte, key int, rect Placement, visible bool) {
 }
 func (w *KittyWriter) schedule() {
 	if !w.closed && w.timer == nil && w.needsDraw() {
-		w.timer = time.AfterFunc(25*time.Millisecond, func() {
+		w.timer = time.AfterFunc(time.Second/60, func() {
 			w.mu.Lock()
 			defer w.mu.Unlock()
 			w.timer = nil
