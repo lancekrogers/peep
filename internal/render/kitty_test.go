@@ -30,6 +30,9 @@ func TestKittyLifecycle(t *testing.T) {
 	if _, err := w.Write([]byte("text")); err != nil {
 		t.Fatal(err)
 	}
+	if w.FrameRate() != 1 {
+		t.Fatal("completed image upload not counted")
+	}
 	first := out.String()
 	if strings.Index(first, "text") > strings.Index(first, "a=t") || !strings.Contains(first, "\x1b[4;6H") || !strings.Contains(first, "c=60,r=20,C=1") {
 		t.Fatal("placement or ordering incorrect")
@@ -50,6 +53,9 @@ func TestKittyLifecycle(t *testing.T) {
 	w.Write([]byte("clock"))
 	if strings.Contains(out.String(), "a=t") {
 		t.Fatal("unchanged image uploaded again")
+	}
+	if w.FrameRate() != 1 {
+		t.Fatal("text-only redraw counted as a video frame")
 	}
 	out.Reset()
 	w.Set(nil, 2, Placement{}, false)

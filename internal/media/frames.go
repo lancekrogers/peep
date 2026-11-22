@@ -22,6 +22,10 @@ type Frame struct {
 // Frames uses a two-frame queue. Cancellation kills the decoder and unblocks readers.
 // ffmpeg scales with square pixels; two vertical pixels become one terminal cell.
 func Frames(ctx context.Context, path string, width, height int, start float64, single bool) <-chan Frame {
+	return FramesAtFPS(ctx, path, width, height, start, single, FPS)
+}
+
+func FramesAtFPS(ctx context.Context, path string, width, height int, start float64, single bool, fps float64) <-chan Frame {
 	out := make(chan Frame, 2)
 	go func() {
 		defer close(out)
@@ -42,13 +46,17 @@ func Frames(ctx context.Context, path string, width, height int, start float64, 
 				return false
 			}
 		}
+		if fps < 1 || fps > 60 {
+			send(Frame{Err: fmt.Errorf("FPS must be between 1 and 60")})
+			return
+		}
 		if width < 1 || height < 2 || width > 240 || height > 160 {
 			send(Frame{Err: fmt.Errorf("invalid frame size %dx%d", width, height)})
 			return
 		}
 		filter := fmt.Sprintf("format=rgb24,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,setsar=1", width, height, width, height)
 		if !single {
-			filter = "fps=12," + filter
+			filter = fmt.Sprintf("fps=%g,", fps) + filter
 		}
 		args := []string{"-v", "error", "-nostdin", "-threads", "1"}
 		// Seeking even to zero can discard the only JPEG packet. Stills never seek.
@@ -79,7 +87,7 @@ func Frames(ctx context.Context, path string, width, height int, start float64, 
 			if err != nil {
 				break
 			}
-			if !send(Frame{RGB: buf, Width: width, Height: height, Time: start + float64(count)/FPS}) {
+			if !send(Frame{RGB: buf, Width: width, Height: height, Time: start + float64(count)/fps}) {
 				break
 			}
 			count++

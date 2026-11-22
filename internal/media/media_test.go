@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"image/png"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -149,5 +150,34 @@ func TestNativeVideoPreservesDetail(t *testing.T) {
 	}
 	cancel()
 	for range frames {
+	}
+}
+
+func TestConfigurableFrameRateAndCancellation(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("integration")
+	}
+	for _, fps := range []float64{6, 24} {
+		for _, native := range []bool{false, true} {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			var frames <-chan Frame
+			if native {
+				frames = NativeFramesAtFPS(ctx, "../../tmp/fixtures/03-video.mp4", 1, fps)
+			} else {
+				frames = FramesAtFPS(ctx, "../../tmp/fixtures/03-video.mp4", 80, 40, 1, false, fps)
+			}
+			for i := 0; i < 3; i++ {
+				f, ok := <-frames
+				if !ok || f.Err != nil {
+					t.Fatalf("fps %g native %v: %v", fps, native, f.Err)
+				}
+				if math.Abs(f.Time-(1+float64(i)/fps)) > 1e-6 {
+					t.Fatalf("incorrect FPS timestamp: %v", f.Time)
+				}
+			}
+			cancel()
+			for range frames {
+			}
+		}
 	}
 }

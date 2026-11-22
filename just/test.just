@@ -22,6 +22,7 @@ test-integration: fixtures
 test-tui: build fixtures
     python3 scripts/tui-smoke.py
     python3 scripts/gif-replay-smoke.py
+    python3 scripts/video-playback-smoke.py
     python3 scripts/document-smoke.py
     python3 scripts/document-scroll-smoke.py
     python3 scripts/browser-smoke.py
@@ -52,3 +53,7 @@ test-file-operations: build
 # Extract, relocate, install, and exercise a single-binary package with no tools on PATH.
 test-package: package
     python3 scripts/package-smoke.py
+
+# Native video clock/FPS, output backpressure, signals, and interactive editor TTY.
+test-video-playback: build
+    python3 scripts/video-playback-smoke.py

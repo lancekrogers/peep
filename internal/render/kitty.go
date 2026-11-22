@@ -29,6 +29,7 @@ type Placement struct{ X, Y, Columns, Rows int }
 // image commands, places images after text, and removes owned images on exit.
 // Fd preserves Bubble Tea's TTY-size detection when using this output wrapper.
 type KittyWriter struct {
+	frameTimes                []time.Time
 	images                    []ImagePlacement
 	imageStates               map[int]placedImage
 	timer                     *time.Timer
@@ -59,7 +60,7 @@ func (w *KittyWriter) Set(png []byte, key int, rect Placement, visible bool) {
 }
 func (w *KittyWriter) schedule() {
 	if !w.closed && w.timer == nil && w.needsDraw() {
-		w.timer = time.AfterFunc(25*time.Millisecond, func() {
+		w.timer = time.AfterFunc(time.Second/60, func() {
 			w.mu.Lock()
 			defer w.mu.Unlock()
 			w.timer = nil
@@ -88,6 +89,7 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 		w.images = nil
 		w.closed = true
 	}
+	uploadedFrame := false
 	var buf bytes.Buffer
 	buf.WriteString("\x1b[?2026h")
 	if w.uploaded && (!w.visible || w.sent != w.key) {
@@ -100,6 +102,7 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 			buf.WriteString(kittyUpload(w.png, w.imageID))
 			w.uploaded = true
 			w.sent = w.key
+			uploadedFrame = true
 		}
 		r := w.rect
 		w.drawn = r
@@ -110,6 +113,15 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 	buf.WriteString("\x1b[?2026l")
 	if _, err := w.out.Write(buf.Bytes()); err != nil {
 		return 0, err
+	}
+	if uploadedFrame {
+		now := time.Now()
+		w.frameTimes = append(w.frameTimes, now)
+		first := 0
+		for first < len(w.frameTimes) && now.Sub(w.frameTimes[first]) >= time.Second {
+			first++
+		}
+		w.frameTimes = w.frameTimes[first:]
 	}
 	return len(p), nil
 }
@@ -162,4 +174,18 @@ func (w *KittyWriter) Close() error {
 		return err
 	}
 	return nil
+}
+
+// FrameRate counts complete new video frames sent to the terminal in the last
+// second. It cannot measure the terminal emulator's physical refresh rate.
+func (w *KittyWriter) FrameRate() int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	count := 0
+	for _, at := range w.frameTimes {
+		if time.Since(at) < time.Second {
+			count++
+		}
+	}
+	return count
 }
