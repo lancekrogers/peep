@@ -51,6 +51,7 @@ type Line struct {
 type Asset struct {
 	Kind, Ref, Alt, Source string
 	Line, SourceLine       int
+	ReplaceFrom            int // one-based first row replaced by a diagram/loading slot; zero appends
 }
 type Layout struct {
 	Lines  []Line
@@ -81,6 +82,9 @@ func Render(ctx context.Context, d *Document, width int, raw bool) (Layout, erro
 			line = strings.ReplaceAll(line, "\t", "    ")
 			layout.add(ansi.Hardwrap(line, width, true), i, width)
 		}
+		if d.Kind == "MMD" && !raw {
+			layout.Assets = append(layout.Assets, Asset{Kind: "mermaid", Source: d.Source, Line: len(layout.Lines), ReplaceFrom: 1})
+		}
 	} else {
 		md := goldmark.New(goldmark.WithExtensions(extension.GFM, extension.DefinitionList))
 		root := md.Parser().Parse(text.NewReader(source))
@@ -99,7 +103,11 @@ func Render(ctx context.Context, d *Document, width int, raw bool) (Layout, erro
 					assets = append(assets, Asset{Kind: "image", Ref: string(im.Destination), Alt: string(im.Text(source)), SourceLine: sourceLine})
 				}
 				if code, ok := n.(*ast.FencedCodeBlock); ok && strings.EqualFold(string(code.Language(source)), "mermaid") {
-					assets = append(assets, Asset{Kind: "mermaid", Source: string(code.Lines().Value(source)), SourceLine: sourceLine})
+					a := Asset{Kind: "mermaid", Source: string(code.Lines().Value(source)), SourceLine: sourceLine}
+					if n == node {
+						a.ReplaceFrom = len(layout.Lines) + 1
+					}
+					assets = append(assets, a)
 				}
 				return ast.WalkContinue, nil
 			})

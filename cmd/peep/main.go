@@ -61,6 +61,11 @@ func run() error {
 				fmt.Printf("%s: %s\n", name, path)
 			}
 		}
+		if path, err := exec.LookPath("mmdg"); err == nil {
+			fmt.Println("mmdg (optional Mermaid):", path)
+		} else {
+			fmt.Println("mmdg (optional Mermaid): not installed; source preview available")
+		}
 		if missing {
 			return fmt.Errorf("install missing media tools; see README.md")
 		}

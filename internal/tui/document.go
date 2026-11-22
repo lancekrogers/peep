@@ -97,8 +97,13 @@ func (m *Model) documentRows(w, h int) []string {
 }
 func (m *Model) documentTitle() string {
 	mode := "Text"
-	if m.doc.Kind == "MD" {
-		mode = "Markdown"
+	if m.doc.Kind == "MMD" {
+		mode = "Mermaid"
+	}
+	if m.doc.Kind == "MD" || m.doc.Kind == "MMD" {
+		if m.doc.Kind == "MD" {
+			mode = "Markdown"
+		}
 		if m.docSource {
 			mode = "Source"
 		}
