@@ -92,3 +92,48 @@ func TestEvictedImageKeepsScrollGeometry(t *testing.T) {
 	}
 	m.cancelDocumentImages()
 }
+
+func TestImageCompletionPreservesViewport(t *testing.T) {
+	for _, name := range []string{"later image", "reload", "above viewport", "inside placeholder", "below viewport"} {
+		t.Run(name, func(t *testing.T) {
+			m := documentImageModel()
+			for i := 0; i < 100; i++ {
+				m.docLayout.Lines = append(m.docLayout.Lines, document.Line{Text: fmt.Sprint(i), SourceLine: 20 + i})
+			}
+			image := m.docImages[0].image
+			index := 0
+			switch name {
+			case "later image":
+				m.docLayout.Assets = append(m.docLayout.Assets, document.Asset{Kind: "image", Line: 2, SourceLine: 11})
+				m.docImages[1] = &documentImage{loading: true, width: m.documentWidth()}
+				index = 1
+				m.docOffset = 10 // Halfway through the first image when the next one loads.
+			case "reload":
+				m.docImages[0].loading = true
+				m.docOffset = 10
+			case "above viewport":
+				m.docImages[0] = &documentImage{loading: true, width: m.documentWidth()}
+				m.docOffset = 12
+			case "inside placeholder":
+				m.docImages[0] = &documentImage{loading: true, width: m.documentWidth()}
+				m.docOffset = 3
+			case "below viewport":
+				m.docImages[0] = &documentImage{loading: true, width: m.documentWidth()}
+				m.docOffset = 0
+			}
+			before, _ := m.documentComposition()
+			offset := m.docOffset
+			text := before[offset].Text
+			m.applyDocumentImage(documentImageMsg{id: m.previewID, index: index, width: m.documentWidth(), image: image})
+			if name == "above viewport" {
+				after, _ := m.documentComposition()
+				if after[m.docOffset].Text != text {
+					t.Fatalf("viewport content changed: %q -> %q", text, after[m.docOffset].Text)
+				}
+			} else if m.docOffset != offset {
+				t.Fatalf("image completion jumped from %d to %d", offset, m.docOffset)
+			}
+			m.cancelDocumentImages()
+		})
+	}
+}

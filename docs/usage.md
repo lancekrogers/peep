@@ -50,7 +50,7 @@ The transport area is hidden for folders and documents unless background media i
 
 The interface uses a full-color theme, highlighted selection, bordered file/preview/queue panes, and a visible `../ Parent directory` entry. In narrow terminals the browser occupies the main pane; `f` switches to the preview. Click a file to select it, then press Enter to open or play.
 
-During music playback, the now-playing pane shows a 24-band spectrum calculated from the actual audio. It follows playback time and seeking, freezes on pause, and clears on stop. Mute and volume affect displayed intensity. This is a visualizer, not an audio equalization effect. Use `v` to return to it while browsing.
+During music playback, the now-playing pane shows 24 logarithmic bands across the nominal human hearing range, **20 Hz–20 kHz**, calculated from the actual audio. Labels align with the bars; narrow previews combine bands. Analysis uses a separate stream and does not change playback quality. It follows playback time and seeking, freezes on pause, and clears on stop. Mute and volume affect displayed intensity. This is a visualizer, not an audio equalization effect. Use `v` to return to it while browsing.
 
 Use `--seek-step=500ms`, `--seek-step=1s`, or another positive duration to choose a startup jump size. `,` changes it during the session, and transport labels update immediately. The fixed `{` / `}` and Shift+arrow jumps remain 30 seconds.
 

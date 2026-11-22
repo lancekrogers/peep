@@ -176,7 +176,7 @@ func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 	if v.id != m.previewID || m.doc == nil {
 		return nil
 	}
-	anchor := m.documentAnchor()
+	_, before := m.documentComposition()
 	m.docImageRevision++
 	entry := &documentImage{image: v.image, width: v.width, key: m.docImageRevision}
 	if v.err != nil {
@@ -194,7 +194,28 @@ func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 		entry.image = document.Image{}
 	}
 	m.docImages[v.index] = entry
-	m.restoreDocumentAnchor(anchor)
+	// An image result must not snap the viewport to the start of its source
+	// block: many rendered rows (including a whole image) share that line.
+	// Only compensate for geometry changed by this particular asset.
+	_, after := m.documentComposition()
+	for _, old := range before {
+		if old.index != v.index {
+			continue
+		}
+		for _, next := range after {
+			if next.index != v.index {
+				continue
+			}
+			if m.docOffset >= old.start+old.rows {
+				m.docOffset += next.start + next.rows - old.start - old.rows
+			} else if m.docOffset >= old.start {
+				m.docOffset = next.start + min(m.docOffset-old.start, next.rows-1)
+			}
+			break
+		}
+		break
+	}
+	m.scrollDocument(0)
 	return m.requestDocumentImages()
 }
 func (m *Model) restoreDocumentAnchor(anchor int) {

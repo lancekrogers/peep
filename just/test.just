@@ -23,6 +23,7 @@ test-tui: build fixtures
     python3 scripts/tui-smoke.py
     python3 scripts/gif-replay-smoke.py
     python3 scripts/document-smoke.py
+    python3 scripts/document-scroll-smoke.py
     python3 scripts/browser-smoke.py
     python3 scripts/explorer-smoke.py
 
@@ -37,6 +38,7 @@ test-gif-replay: build fixtures
 # Focused document-preview acceptance, including playback while reading.
 test-documents: build fixtures
     python3 scripts/document-smoke.py
+    python3 scripts/document-scroll-smoke.py
 
 # Compiled-in renderer plus native-protocol TUI checks (no mmdg installation).
 test-mermaid: build

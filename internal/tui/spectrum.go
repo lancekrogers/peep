@@ -47,15 +47,15 @@ func (m *Model) nextSpectrum() tea.Cmd {
 }
 func (m *Model) spectrumRows(w, h int) []string {
 	out := make([]string, h)
-	if h < 5 {
+	if h < 7 {
 		return out
 	}
 	title := m.active.Title
 	if title == "" {
 		title = filepath.Base(m.active.Path)
 	}
-	barHeight := max(2, min(12, h-7))
-	top := max(0, (h-barHeight-5)/2)
+	barHeight := max(1, min(12, h-6))
+	top := max(0, (h-barHeight-6)/2)
 	out[top] = center(color("♪  "+render.Safe(title), accent), w)
 	out[top+1] = center(color(render.Safe(m.active.Artist), muted), w)
 	columns := max(1, min(media.SpectrumBands, w/3))
@@ -66,8 +66,11 @@ func (m *Model) spectrumRows(w, h int) []string {
 		var b strings.Builder
 		b.WriteString(strings.Repeat(" ", left))
 		for col := 0; col < columns; col++ {
-			band := col * media.SpectrumBands / columns
-			level := m.bands[band]
+			// Aggregate all bands at narrow widths; do not drop high treble.
+			level := 0.0
+			for band := col * media.SpectrumBands / columns; band < (col+1)*media.SpectrumBands/columns; band++ {
+				level = max(level, m.bands[band])
+			}
 			if m.muted {
 				level = 0
 			} else {
@@ -92,7 +95,8 @@ func (m *Model) spectrumRows(w, h int) []string {
 		}
 		out[top+3+row] = b.String()
 	}
-	label := "60 Hz       AUDIO SPECTRUM       7 kHz"
+	out[top+barHeight+3] = strings.Repeat(" ", left) + color(spectrumAxis(total), muted)
+	label := "AUDIO SPECTRUM · nominal hearing range"
 	if m.state == "Paused" {
 		label = "PAUSED · spectrum frozen"
 	}
@@ -102,8 +106,40 @@ func (m *Model) spectrumRows(w, h int) []string {
 	if m.spectrumError != "" {
 		label = "Spectrum unavailable · audio playback continues"
 	}
-	if top+barHeight+3 < h {
-		out[top+barHeight+3] = center(color(label, muted), w)
+	if top+barHeight+4 < h {
+		out[top+barHeight+4] = center(color(label, muted), w)
 	}
 	return out
+}
+
+// Labels sit on the same logarithmic axis as the bars. Keep endpoints at small
+// widths and add interior ticks only when they fit without touching.
+func spectrumAxis(width int) string {
+	if width < 13 {
+		return ""
+	}
+	axis := []byte(strings.Repeat(" ", width))
+	occupied := make([]bool, width)
+	place := func(label string, at int) {
+		at = max(0, min(width-len(label), at))
+		for i := max(0, at-1); i < min(width, at+len(label)+1); i++ {
+			if occupied[i] {
+				return
+			}
+		}
+		copy(axis[at:], label)
+		for i := at; i < at+len(label); i++ {
+			occupied[i] = true
+		}
+	}
+	place("20 Hz", 0)
+	place("20 kHz", width-6)
+	for _, tick := range []struct {
+		hz    float64
+		label string
+	}{{100, "100"}, {1000, "1k"}, {10000, "10k"}} {
+		at := int(math.Round(math.Log(tick.hz/media.SpectrumMinHz) / math.Log(media.SpectrumMaxHz/media.SpectrumMinHz) * float64(width-1)))
+		place(tick.label, at-len(tick.label)/2)
+	}
+	return string(axis)
 }

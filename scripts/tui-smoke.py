@@ -44,6 +44,7 @@ try:
     s.expect(b'00:01 / 00:08')
     (ARTIFACTS/'audio-playing.ansi').write_bytes(s.log)
     assert b'\xe2\x96\x88' in s.log, 'music spectrum bars absent'
+    assert b'20 Hz' in s.log and b'20 kHz' in s.log, 'full hearing range axis absent'
     s.send(b'j');s.read(.3)
     s.send(b' ');s.expect(b'[Paused]');s.send(b's');s.expect(b'[Stopped] 00:00');s.finish()
     s=Session('broken','--play','tmp/fixtures/05-broken.png');sessions.append(s)
