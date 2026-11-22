@@ -21,6 +21,11 @@ fixture.mkdir(parents=True)
 extracted=fixture/'extracted'
 with tarfile.open(archive) as tar:tar.extractall(extracted,filter='data')
 relocated=fixture/'relocated package';extracted.rename(relocated)
+assert (relocated/'docs/assets/peep-logo.svg').is_file()
+assert (relocated/'docs/install.md').is_file()
+assert (relocated/'examples/night-shift/04-audiobook/chapter-01.m4b').is_file()
+assert (relocated/'examples/night-shift/field-guide-link.md').resolve()==(relocated/'examples/night-shift/00-start-here.md').resolve()
+
 no_tools=fixture/'no-tools';no_tools.mkdir()
 env=dict(os.environ,PATH=str(no_tools))
 binary=relocated/'bin/peep'

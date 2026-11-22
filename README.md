@@ -1,161 +1,68 @@
-# peep
+<p align="center">
+  <img src="docs/assets/peep-logo.svg" width="390" alt="peep">
+</p>
+<p align="center"><strong>Your files. In focus.</strong></p>
+<p align="center">
+  <a href="https://github.com/lancekrogers/peep/actions/workflows/check.yml"><img src="https://img.shields.io/badge/CI-GitHub_Actions-58d6be?style=flat" alt="CI on GitHub Actions"></a>
+  <img src="https://img.shields.io/badge/Go-1.27%2B-00ADD8?style=flat" alt="Go 1.27 or newer">
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-58d6be?style=flat" alt="macOS and Linux">
+</p>
 
-A terminal file explorer for pictures, animated GIFs, videos, and music.
+**peep is a terminal file explorer that lets you see, hear, and read your files.**
+Browse a folder, preview an image, play a recording, or open an illustrated
+Markdown document—without leaving the terminal.
 
-Browse silently, press Enter to play, and keep browsing while the current item continues. Still previews use native Kitty graphics automatically when a direct terminal confirms Kitty graphics support, preserving images up to 2048 pixels per dimension. Other terminals use ANSI color cells. Video and animated GIF playback also use native graphics on that path, preserving up to 1920 × 1080 pixels at a 12 fps target. The color-cell renderer remains the compatibility fallback.
+- **Browse** with Vim navigation, numbered jumps, sorting, fuzzy search, and globs.
+- **Watch** images, animated GIFs, and videos with native terminal graphics.
+- **Listen** to music and audiobooks with seeking, playback speed, and a live spectrum.
+- **Read** syntax-highlighted source, Markdown with local images, and Mermaid diagrams.
+- **Manage** files with rename, move, confirmed deletion, and your preferred editor.
 
-## Install and run
+## Get started
 
-Mermaid rendering and fonts are compiled into peep. A packaged executable needs no Go, Node, browser, or separate `mmdg` installation. macOS and Linux on arm64/amd64 are supported.
-
-From an extracted peep archive:
+Source builds need **Go 1.27+** and **just**. FFmpeg and mpv handle media;
+`just install` sets them up through your supported package manager if missing.
 
 ```sh
-./bin/peep --install                  # defaults to ~/.local; installs missing media tools
-./bin/peep --install --prefix /your/prefix
-./bin/peep --install --no-deps         # offline/managed hosts: skip media dependency setup
-~/.local/bin/peep --doctor
+git clone https://github.com/lancekrogers/peep.git
+cd peep
+just install
+~/.local/bin/peep ~/Pictures
 ```
 
-The installer uses Homebrew on macOS or apt-get/dnf/pacman on Linux for missing FFmpeg/mpv tools. It may request sudo through the package manager. If the manager or packages are unavailable, installation reports the failure before replacing peep. `--no-deps` still supports documents and Mermaid diagrams; media features require their tools.
+Mermaid rendering and fonts are built in. No Node, browser, or separate diagram
+helper. [Installation details and archive installs →](docs/install.md)
 
-Installation stages and verifies a versioned executable, then atomically updates `<prefix>/bin/peep`. Old versions remain available to running processes. Use the same command for upgrades. Add `<prefix>/bin` to PATH and check `command -v peep` if an older Go-bin installation takes precedence.
+## Take a peep
 
-Building from source requires **Go 1.27+** and `just`:
+The included **Night Shift** collection has original artwork, a music track,
+two narrated audiobook chapters, a video, a GIF, diagrams, and an illustrated field guide.
+
+![Moonrise at North Ridge, from the Night Shift demo](examples/night-shift/01-images/01-moonrise.jpg)
 
 ```sh
-just build                         # includes Mermaid automatically
-just install                       # installs into ~/.local with media setup
-just package                       # archive + SHA-256 file for the current host
-just package-all                   # macOS/Linux × arm64/amd64 archives
-./bin/peep ~/Pictures
-./bin/peep --play movie.mp4
-./bin/peep --play photo.png animation.gif movie.mp4 song.flac
-./bin/peep --doctor
-./bin/peep --seek-step=1s --play movie.mp4
-./bin/peep --renderer=kitty ~/Pictures
-./bin/peep --renderer=cells ~/Pictures
+just demo
 ```
 
-Package archives contain one executable, README, and renderer notices. `--licenses` displays those notices from the executable itself. CI builds host packages and checks installation/rendering without a helper or language toolchain on PATH; publishing a release is a separate action.
+This opens a disposable copy—safe for showing rename, move, and delete.
+The curated files are also ready to browse in [`examples/night-shift`](examples/night-shift).
+[Demo walkthrough](docs/demo.md) · [Media credits and sources](examples/night-shift/CREDITS.md)
 
-On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
-
-Without `--play`, startup is silent. Opening a directory lists files and folders. Text and Markdown files have scrollable previews; binary and special files show an unavailable-preview message. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Browsing and playback never modify files. Explicit file operations are available from the browser.
-
-## Controls
+## The essentials
 
 | Key | Action |
-|---|---|
-| `j/k`, up/down | Select file; select queue entry when queue is open |
-| `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
-| `Enter` | Enter directory, focus a document, or start selected media |
-| `gg`, `G`, `12G` / `12gg` | First, last, or numbered entry; rendered row in document focus |
-| `5j`, `5k`, `Ctrl+D` / `Ctrl+U` | Counted movement; half-page down / up |
-| `#` | Toggle absolute / relative file and queue numbers (selected row stays absolute) |
-| `PgUp/PgDn` | Page through document preview, otherwise file list or queue |
-| `j/k`, arrows, Home/End in document focus | Scroll document / beginning / end |
-| `R` on Markdown | Toggle styled Markdown and source |
-| `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
-| `H` | Toggle hidden files |
-| `S` in browser | Sort by name, modified, created, size, or type; reverse order |
-| `/` / `Ctrl+F`, then `n` / `N` in document focus | Find text; next / previous match |
-| `e` | Open selected file in `$VISUAL`, then `$EDITOR`, or `vi` |
-| `Ctrl+R` | Rename selected entry; Ctrl+U clears the current name |
-| `M` | Move to a folder or full destination path |
-| `d` / `Delete` in browser | Delete with a yes/no confirmation |
-| `Space`, `p` | Play/pause |
-| `s` | Stop and reset to zero |
-| `[`, `]` | Seek backward/forward by the selected step (default 5 seconds); also clickable |
-| `t`, `Tab`, then left/right | Focus timeline and seek backward/forward by the selected step |
-| Click timeline | Seek to the clicked position |
-| `,` | Cycle seek step: 1, 5, 10, 30, 60 seconds |
-| `{`, `}` | Seek backward/forward 30 seconds |
-| `0` | Seek to start |
-| `n`, `b` | Next/previous queue entry |
-| `z`, `x`, `c` | Halve/double speed (0.25–4x), reset to 1x |
-| `-`, `=`, `m` | Volume down/up, mute |
-| `D` | Cycle image display duration: 2, 5, 10, 30 seconds |
-| `r` | Repeat off / one / all |
-| `a`, `Q` | Append selected file / toggle queue |
-| `d` in queue | Remove an inactive queue entry; never its file |
-| `f`, `v` | Focus preview / show now playing |
-| `B` | Toggle full-width browser |
-| `?`, `q`, `Ctrl+C` | Help / quit / quit |
+| --- | --- |
+| `j/k` or `↑/↓` · `Enter` | Select · open or play |
+| `Backspace` · `Esc` | Parent folder · back |
+| `/` | Filter filenames; find text inside a focused document |
+| `S` | Sort by name, modified, created, size, or type |
+| `f` · `v` | Focus preview · show now playing |
+| `Space` · `[` / `]` | Play/pause · seek |
+| `,` | Change the seek step |
+| `?` · `q` | All controls · quit |
 
-Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Queries containing glob syntax instead match the whole filename (for example, `rec-*` or `*.txt`). Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
+Native image quality requires a Kitty-graphics-compatible terminal. Other terminals
+use color-cell previews; Mermaid stays readable as source. Audio plays on the host
+running peep. [Terminal compatibility →](docs/terminal-graphics.md)
 
-File and queue rows have one-based numbers, including the parent entry. Numbers follow the current filtered list. Type colors distinguish directories, media, documents, source, configuration, archives, and PDFs; text badges remain visible. Counts appear beside the current mode and Escape cancels an unfinished command. `Ctrl+F` remains search.
-
-The transport area is hidden for folders and documents unless background media is playing, paused, or loading. Selected media, including image slideshows, retains controls. Finished playback no longer occupies the document reader.
-
-The interface uses a full-color theme, highlighted selection, bordered file/preview/queue panes, and a visible `../ Parent directory` entry. In narrow terminals the browser occupies the main pane; `f` switches to the preview. Click a file to select it, then press Enter to open or play.
-
-During music playback, the now-playing pane shows a 24-band spectrum calculated from the actual audio. It follows playback time and seeking, freezes on pause, and clears on stop. Mute and volume affect displayed intensity. This is a visualizer, not an audio equalization effect. Use `v` to return to it while browsing.
-
-Use `--seek-step=500ms`, `--seek-step=1s`, or another positive duration to choose a startup jump size. `,` changes it during the session, and transport labels update immediately. The fixed `{` / `}` and Shift+arrow jumps remain 30 seconds.
-
-Timelines always control the file named **NOW PLAYING**, even when the preview shows something else. Images use a slideshow clock, initially five seconds. GIFs play one duration before advancing. Rewind is backward seeking; continuous reverse playback is not implemented. Unknown-duration files have no percentage seek or end jump.
-
-## File operations
-
-Rename, move and delete operate on the selected browser entry; the parent entry is protected. Escape cancels a prompt. Rename accepts a filename; move accepts an existing folder or full path, relative to the current directory, absolute, or beginning with `~/`. Existing destinations (including dangling symlinks) are never overwritten. Moves are atomic within one filesystem; cross-filesystem moves are rejected.
-
-Deletion is permanent. The confirmation shows the target: `y` confirms; `n`, Enter, or Escape cancels. It removes files, symlinks themselves, and empty folders; non-empty folders are refused. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
-
-The editor command supports quoted paths and arguments, without shell expansion. The file path is passed as a separate absolute argument. For graphical editors, configure their wait flag (for example `EDITOR="code --wait"`). Peep releases the terminal while the editor runs and refreshes the listing and preview on return.
-
-## Pixelated previews over SSH
-
-The preview title shows `native` or `cells`. Cells draw the image with colored text blocks, so resolution is limited by the terminal grid. Native graphics transmit image pixels through the Kitty protocol. Over SSH, the terminal app on the viewing device must support that protocol; the server's terminal software does not supply that capability. A successful SSH connection and true-color text do not imply native image support.
-
-Auto mode tests support at startup. If the client does not answer or rejects the query, peep keeps the cell fallback. A smaller terminal font can provide more cells, within the decode cap, but cannot match native photo quality. Peep does not yet implement Sixel or iTerm2 image adapters. `--renderer=kitty` forces the protocol only when you know the client supports it; it cannot add support to the client.
-
-## Development
-
-The root `justfile` imports focused recipes from `just/build.just`, `just/dev.just`, and `just/test.just`.
-
-```sh
-just                   # list recipes
-just check             # format check, vet, race tests, build
-just test-integration  # generated fixtures + real ffmpeg/mpv; null audio output
-just test-tui          # real PTY interaction, resize, controls, process cleanup
-just build-all         # macOS/Linux, arm64/amd64; compile only
-```
-
-Integration fixtures and terminal transcripts are generated under ignored `tmp/`. Tests use synthetic tones and a null audio device, so they verify playback timing and command behavior without playing sound through your speakers. Actual device output and perceptual audio/video synchronization require a manual listening check.
-
-## Bootstrap boundaries
-
-- Implemented: directory navigation, hidden-file toggle, filename filtering, still and animated previews, in-terminal video, music playback, tags, and an audio-reactive spectrum, embedded cover art in static previews when FFmpeg exposes it, mixed queues, transport, speed, volume, repeat, and responsive focus/queue views.
-- The cell fallback uses a 120-column by 100-pixel decode cap. Native still previews preserve up to 2048 pixels per dimension and are placed by the terminal. Auto mode sends a bounded capability query during startup. Confirmed Kitty-compatible terminals use native graphics; a rejection or no reply within 350 ms keeps cells. Multiplexers skip probing and default to cells. `--renderer=kitty` and `--renderer=cells` bypass detection. No iTerm2 inline-image adapter is implemented. 12 fps is a playback target, not a universal performance guarantee.
-- The queue stops with an error on a bad item; use next or select another file. Automatic skip-on-error is deferred. Stopping during load cancels it; Play retries the retained entry.
-- Preferences, queue state, and position are session-local. No automatic resume or persistent configuration yet.
-- Shuffle, image zoom/pan, custom bindings, timestamp entry, drag scrubbing, queue reordering, subtitles, and network streams are deferred from the broader design.
-- Support is based on the installed FFmpeg/mpv build. Filename recognition is not a codec guarantee. Tested fixture details live in [verification](docs/verification.md).
-
-See [architecture](docs/architecture.md) for the rendering and playback boundary. The owning campaign design is `workflow/design/peep` (WI-aa8358).
-
-## Document previews
-
-Text and Markdown previews are implemented on this branch. Enter or `f` focuses a document; Escape returns to the browser. File filtering and playback controls remain available while reading. Reads are bounded to 2 MiB and layout to 12,000 rows, with explicit truncation markers. Non-UTF-8, binary, and special files are not decoded as text. Documents never enter media queues. Remote document resources are not fetched.
-
-Source and configuration files use filename-based syntax highlighting (including Go, Rust, Python, JavaScript/TypeScript, shell, JSON, YAML, TOML and Dockerfiles). Markdown code fences use their language tag, including nested fences. Unknown source types and inputs larger than 128 KiB remain plain text; expensive source-file highlighting falls back to text. Source mode stays unstyled.
-
-Markdown also displays local inline and reference-style images after their containing block. Native graphics preserve pixels and clip images when scrolling; other terminals show color cells. Missing images show an error, and remote images are not fetched. GIFs embedded in documents are still posters. `R` switches back to source.
-
-Mermaid fences and `.mmd`/`.mermaid` files render through the built-in [mmdg Go library](https://github.com/bvolpato/mermaid-go-renderer) when native graphics are available. `R` switches between diagram and source. Invalid diagrams and cell-only terminals keep readable source with an explanation. Top-level fences are replaced by diagrams; diagrams in lists/quotes appear after their containing block, preserving the surrounding text.
-
-The renderer is pinned to v0.13.0 in peep's Go module, with embedded fonts. Peep builds with Go 1.27+ and CGO disabled. Rendering runs in a private worker mode of the same executable so selection changes and timeouts can cancel both layout and PNG conversion. No additional executable is installed or searched on PATH.
-
-Flowcharts, sequence diagrams, and class diagrams are tested. PNGs fit within 1600 × 1600 pixels; the source limit is 128 KiB and the worker deadline is eight seconds. Invalid diagrams retain readable source and an error. No links are opened and no remote image assets are fetched. `just test-mermaid` exercises the built-in renderer; `just test-package` verifies a relocated and installed package with an empty tool PATH.
-
-Development uses feature branches and reviewable PRs. Planning lives in the My_Tools campaign work item WI-aa8358 (`workflow/design/peep`).
-
-Focused text previews support `/` or `Ctrl+F` to find text in the displayed document. Search is literal and case-insensitive, with highlighted matches and a match counter. Enter keeps the search; `n` and `N` jump to the next/previous occurrence and wrap at the ends. Escape while typing clears the search and restores the original scroll position; Ctrl+U clears the query. Browser filename filtering stays separate. Use `R` to search Markdown/Mermaid source instead of rendered text.
-
-Symbolic links use a cyan `LINK` badge and filename, including directory links and dangling links; directory links still open normally.
-
-Press `S` in the browser for sorting: `n` name, `m` last modified, `c` date created, `s` size, `t` extension/type, or `r` reverse the current order. Dates start newest first and sizes largest first. Directories stay first; unavailable metadata stays last. Sorting preserves the selected entry and persists across folders and filters during the session. Creation time uses filesystem birth time on macOS and Linux where supported, never inode-change time. Directory sizes describe the directory entry, not recursive contents; symlink metadata describes the link itself.
-
-The browser filter accepts whole-filename globs such as `rec-*`, `*.txt`, `photo-??.jpg`, and `rec-[0-9]*`. Matching is case-insensitive and includes directories. Spaces inside a glob are literal. Plain queries retain ranked substring/fuzzy matching until an explicit sort is chosen. `Ctrl+U` clears the query; malformed glob patterns show an error. Hidden files remain controlled by `H`. The file-list title shows the active sort and direction; the status row shows the selected entry's sort value.
+[Full user guide](docs/usage.md) · [Development](docs/development.md) · [Architecture](docs/architecture.md)
