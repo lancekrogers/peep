@@ -19,6 +19,7 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 				delta = -3
 			}
 			m.scrollDocument(delta)
+			return m.requestDocumentImages()
 		}
 		return nil
 	}

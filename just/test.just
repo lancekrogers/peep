@@ -21,7 +21,12 @@ test-integration: fixtures
 # Exercise the real TUI in a PTY with synthetic fixtures.
 test-tui: build fixtures
     python3 scripts/tui-smoke.py
+    python3 scripts/gif-replay-smoke.py
     python3 scripts/document-smoke.py
+
+# GIF replay and directory switching regressions.
+test-gif-replay: build fixtures
+    python3 scripts/gif-replay-smoke.py
 
 # Focused document-preview acceptance, including playback while reading.
 test-documents: build fixtures

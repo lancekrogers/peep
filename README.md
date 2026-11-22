@@ -106,4 +106,6 @@ See [architecture](docs/architecture.md) for the rendering and playback boundary
 
 Text and Markdown previews are implemented on this branch. Enter or `f` focuses a document; Escape returns to the browser. File filtering and playback controls remain available while reading. Reads are bounded to 2 MiB and layout to 12,000 rows, with explicit truncation markers. Non-UTF-8, binary, and special files are not decoded as text. Documents never enter media queues. Remote document resources are not fetched.
 
-The [file preview proposal](docs/file-previews.md) describes the next slices: embedded local images and optional native Mermaid rendering. Those image/diagram features are not part of this first slice. Development uses feature branches and reviewable PRs.
+Markdown also displays local inline and reference-style images after their containing block. Native graphics preserve pixels and clip images when scrolling; other terminals show color cells. Missing images show an error, and remote images are not fetched. GIFs embedded in documents are still posters. `R` switches back to source.
+
+Optional native Mermaid rendering is the next slice in the [file preview proposal](docs/file-previews.md). Development uses feature branches and reviewable PRs.

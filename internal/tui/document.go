@@ -18,6 +18,8 @@ type documentMsg struct {
 }
 
 func (m *Model) clearDocument() {
+	m.cancelDocumentImages()
+	m.docImages = nil
 	m.doc = nil
 	m.docLayout = document.Layout{}
 	m.docOffset = 0
@@ -31,10 +33,11 @@ func (m *Model) documentWidth() int {
 	return max(4, w)
 }
 func (m *Model) documentAnchor() int {
-	if len(m.docLayout.Lines) == 0 {
+	lines, _ := m.documentComposition()
+	if len(lines) == 0 {
 		return 0
 	}
-	return m.docLayout.Lines[min(m.docOffset, len(m.docLayout.Lines)-1)].SourceLine
+	return lines[min(m.docOffset, len(lines)-1)].SourceLine
 }
 func (m *Model) readDocument(path string) tea.Cmd {
 	id, width := m.previewID, m.documentWidth()
@@ -54,6 +57,7 @@ func (m *Model) reflowDocument() tea.Cmd {
 	if m.doc == nil {
 		return nil
 	}
+	m.cancelDocumentImages()
 	if m.previewCancel != nil {
 		m.previewCancel()
 	}
@@ -74,26 +78,19 @@ func (m *Model) applyDocument(v documentMsg) {
 	}
 	m.doc = v.doc
 	m.docLayout = v.layout
-	m.docOffset = 0
-	for i, line := range v.layout.Lines {
-		if line.SourceLine > v.anchor {
-			break
-		}
-		if i == 0 || v.layout.Lines[i-1].SourceLine != line.SourceLine {
-			m.docOffset = i
-		}
-	}
-	m.scrollDocument(0)
+	m.restoreDocumentAnchor(v.anchor)
 }
 func (m *Model) scrollDocument(delta int) {
-	m.docOffset = max(0, min(max(0, len(m.docLayout.Lines)-m.layout().body), m.docOffset+delta))
+	lines, _ := m.documentComposition()
+	m.docOffset = max(0, min(max(0, len(lines)-m.layout().body), m.docOffset+delta))
 }
 func (m *Model) documentRows(w, h int) []string {
+	lines, _ := m.documentComposition()
 	rows := make([]string, h)
 	for i := range rows {
 		at := m.docOffset + i
-		if at < len(m.docLayout.Lines) {
-			rows[i] = m.docLayout.Lines[at].Text
+		if at < len(lines) {
+			rows[i] = lines[at].Text
 		}
 	}
 	return rows
@@ -106,5 +103,5 @@ func (m *Model) documentTitle() string {
 			mode = "Source"
 		}
 	}
-	return fmt.Sprintf("%s · %d/%d", mode, min(m.docOffset+1, len(m.docLayout.Lines)), len(m.docLayout.Lines))
+	return fmt.Sprintf("%s · %s", mode, m.documentPosition())
 }
