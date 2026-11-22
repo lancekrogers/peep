@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"github.com/lancekrogers/peep/internal/diagram"
@@ -10,6 +11,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -27,6 +29,7 @@ func run() error {
 	}
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
 	seekStep := flags.Duration("seek-step", 5*time.Second, "rewind/forward step (e.g. 500ms, 1s, 10s)")
+	fps := flags.Int("fps", 12, "video/GIF target FPS (1–60; F changes it during playback)")
 	play := flags.Bool("play", false, "start playback explicitly")
 	doctor := flags.Bool("doctor", false, "report media dependencies")
 	install := flags.Bool("install", false, "install this executable and missing media dependencies")
@@ -45,6 +48,9 @@ func run() error {
 			return nil
 		}
 		return err
+	}
+	if *fps < 1 || *fps > 60 {
+		return fmt.Errorf("--fps must be between 1 and 60")
 	}
 	if *seekStep <= 0 {
 		return fmt.Errorf("--seek-step must be a positive duration")
@@ -112,8 +118,19 @@ func run() error {
 	if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
 		return fmt.Errorf("peep needs an interactive terminal; use --doctor for diagnostics")
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	// Own catchable termination signals before starting any media children.
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
+	state, err := term.GetState(os.Stdin.Fd())
+	if err != nil {
+		return fmt.Errorf("save terminal state: %w", err)
+	}
+	// Last resort after the renderer closes: cancel partial control strings and
+	// disable modes peep owns, even if startup or the UI exits through an error.
+	defer func() {
+		fmt.Fprint(os.Stdout, "\x18\x1b\\\x1b[?2026l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1006l\x1b[?1004l\x1b[?2004l\x1b[0m\x1b[?25h\x1b[?1049l")
+		_ = term.Restore(os.Stdin.Fd(), state)
+	}()
 	backend, err := player.New(ctx, *audio)
 	notice := ""
 	if err != nil {
@@ -126,7 +143,8 @@ func run() error {
 		return err
 	}
 	model.SetSeekStep(*seekStep)
-	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx)}
+	model.SetVideoFPS(*fps)
+	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx), tea.WithoutSignalHandler()}
 	var app tea.Model = model
 	probe := *renderer == "auto" && os.Getenv("TMUX") == "" && os.Getenv("STY") == ""
 	if mode == "kitty" || probe {
@@ -142,6 +160,11 @@ func run() error {
 		options = append(options, tea.WithOutput(writer))
 	}
 	_, err = tea.NewProgram(app, options...).Run()
+	interrupted := ctx.Err() != nil
+	cancel() // Stop decoders before deferred terminal cleanup or editor teardown.
+	if interrupted && errors.Is(err, tea.ErrProgramKilled) {
+		return nil
+	}
 	return err
 }
 func main() {

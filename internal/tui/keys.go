@@ -133,6 +133,8 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	}
 
 	switch key {
+	case "F":
+		return m.cycleVideoFPS()
 	case "tab", "shift+tab", "t":
 		if !m.transportVisible() {
 			return nil

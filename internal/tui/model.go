@@ -47,6 +47,9 @@ type controlMsg struct {
 }
 
 type Model struct {
+	targetFPS                                 int
+	videoStarted                              time.Time
+	frameTimes                                []time.Time
 	navCount                                  int
 	navG                                      bool
 	relativeNumbers                           bool
@@ -224,6 +227,8 @@ func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd
 	m.rows = nil
 	m.nativePNG = nil
 	m.displayingActive = active
+	m.videoStarted = time.Now()
+	m.frameTimes = nil
 	m.preview = info
 	m.previewError = ""
 	if active && info.Kind == media.Audio {
@@ -239,10 +244,10 @@ func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd
 		return func() tea.Msg { png, err := media.PreviewPNG(ctx, path); return nativeMsg{id, png, err} }
 	}
 	if m.graphics != nil {
-		m.frames = media.NativeFrames(ctx, info.Path, start)
+		m.frames = media.NativeFramesAtFPS(ctx, info.Path, start, float64(m.videoFPS()))
 	} else {
 		w, h := m.dimensions()
-		m.frames = media.Frames(ctx, info.Path, w, h, start, !active || info.Kind == media.Image || info.Kind == media.Audio)
+		m.frames = media.FramesAtFPS(ctx, info.Path, w, h, start, !active || info.Kind == media.Image || info.Kind == media.Audio, float64(m.videoFPS()))
 	}
 	return m.nextFrame()
 }
@@ -460,7 +465,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.frames = nil
 			return m, nil
 		}
-		if !m.displayingActive || m.active.Kind == media.Image || m.active.Kind == media.Audio || v.frame.Time <= m.position+0.08 {
+		if m.clockedVideo() {
+			if m.backend != nil && m.state == "Playing" {
+				m.position = m.backend.Snapshot().Position
+			}
+			if m.position-v.frame.Time > m.frameTolerance() {
+				if m.state == "Playing" && m.position-v.frame.Time > 1 && time.Since(m.videoStarted) > 2*time.Second {
+					return m, m.restartVideoFrames()
+				}
+				return m, m.nextFrame()
+			}
+		}
+		if !m.displayingActive || m.active.Kind == media.Image || m.active.Kind == media.Audio || v.frame.Time <= m.position+0.02 {
 			m.showFrame(v.frame)
 			return m, m.nextFrame()
 		}
@@ -564,8 +580,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.spectrumPending = nil
 			cmds = append(cmds, m.nextSpectrum())
 		}
-		if m.pending != nil && m.pending.Time <= m.position+0.08 {
-			m.showFrame(*m.pending)
+		if m.pending != nil && m.pending.Time <= m.position+0.02 {
+			if !m.clockedVideo() || m.position-m.pending.Time <= m.frameTolerance() {
+				m.showFrame(*m.pending)
+			}
 			m.pending = nil
 			cmds = append(cmds, m.nextFrame())
 		}
@@ -635,6 +653,8 @@ func (m *Model) refilter() tea.Cmd {
 }
 
 func (m *Model) showFrame(f media.Frame) {
+	m.frameTimes = append(m.frameTimes, time.Now())
+	m.frameTimes = recentFrames(m.frameTimes, time.Now())
 	if len(f.PNG) > 0 {
 		m.nativePNG = f.PNG
 		m.nativeRevision++

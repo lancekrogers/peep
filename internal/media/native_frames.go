@@ -11,8 +11,12 @@ import (
 )
 
 // NativeFrames preserves video detail as PNG frames rather than terminal cells.
-// The 1920x1080 cap, 12 fps sampling, and two-frame queue bound decoder work.
+// Resolution, configurable sampling, and a two-frame queue bound decoder work.
 func NativeFrames(ctx context.Context, path string, start float64) <-chan Frame {
+	return NativeFramesAtFPS(ctx, path, start, FPS)
+}
+
+func NativeFramesAtFPS(ctx context.Context, path string, start, fps float64) <-chan Frame {
 	out := make(chan Frame, 2)
 	go func() {
 		defer close(out)
@@ -24,11 +28,15 @@ func NativeFrames(ctx context.Context, path string, start float64) <-chan Frame 
 				return false
 			}
 		}
+		if fps < 1 || fps > 60 {
+			send(Frame{Err: fmt.Errorf("FPS must be between 1 and 60")})
+			return
+		}
 		args := []string{"-v", "error", "-nostdin", "-threads", "1"}
 		if start > 0 {
 			args = append(args, "-ss", fmt.Sprintf("%.3f", start))
 		}
-		args = append(args, "-i", path, "-an", "-sn", "-vf", "fps=12,scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease", "-threads", "1", "-f", "image2pipe", "-c:v", "png", "pipe:1")
+		args = append(args, "-i", path, "-an", "-sn", "-vf", fmt.Sprintf("fps=%g,scale=w='min(iw,1920)':h='min(ih,1080)':force_original_aspect_ratio=decrease", fps), "-threads", "1", "-f", "image2pipe", "-c:v", "png", "-compression_level", "1", "pipe:1")
 		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
@@ -52,7 +60,7 @@ func NativeFrames(ctx context.Context, path string, start float64) <-chan Frame 
 				}
 				break
 			}
-			f := Frame{PNG: data, Time: start + float64(count)/FPS, Width: int(binary.BigEndian.Uint32(data[16:20])), Height: int(binary.BigEndian.Uint32(data[20:24]))}
+			f := Frame{PNG: data, Time: start + float64(count)/fps, Width: int(binary.BigEndian.Uint32(data[16:20])), Height: int(binary.BigEndian.Uint32(data[20:24]))}
 			if !send(f) {
 				break
 			}

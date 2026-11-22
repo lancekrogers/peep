@@ -34,6 +34,7 @@
 | `n`, `b` | Next/previous queue entry |
 | `z`, `x`, `c` | Halve/double speed (0.25–4x), reset to 1x |
 | `-`, `=`, `m` | Volume down/up, mute |
+| `F` | Cycle video/GIF target FPS: 1, 6, 12, 24, 30, 60 |
 | `D` | Cycle image display duration: 2, 5, 10, 30 seconds |
 | `r` | Repeat off / one / all |
 | `a`, `Q` | Append selected file / toggle queue |
@@ -53,6 +54,8 @@ The interface uses a full-color theme, highlighted selection, bordered file/prev
 During music playback, the now-playing pane shows 24 logarithmic bands across the nominal human hearing range, **20 Hz–20 kHz**, calculated from the actual audio. Labels align with the bars; narrow previews combine bands. Analysis uses a separate stream and does not change playback quality. It follows playback time and seeking, freezes on pause, and clears on stop. Mute and volume affect displayed intensity. This is a visualizer, not an audio equalization effect. Use `v` to return to it while browsing.
 
 Use `--seek-step=500ms`, `--seek-step=1s`, or another positive duration to choose a startup jump size. `,` changes it during the session, and transport labels update immediately. The fixed `{` / `}` and Shift+arrow jumps remain 30 seconds.
+
+Use `--fps=24` to choose the initial video/GIF sampling rate (any integer from 1 to 60; default 12). `F` changes it without restarting playback. The FPS counter shows frames sent to the terminal over the last second versus the target in native mode, or frames rendered in cell mode. It does not measure the terminal display’s refresh rate. A lower target reduces decoding and terminal traffic; actual throughput also depends on playback speed and terminal performance. Late frames are skipped to follow the audio clock.
 
 Timelines always control the file named **NOW PLAYING**, even when the preview shows something else. Images use a slideshow clock, initially five seconds. GIFs play one duration before advancing. Rewind is backward seeking; continuous reverse playback is not implemented. Unknown-duration files have no percentage seek or end jump.
 
@@ -85,3 +88,7 @@ Symbolic links use a cyan `LINK` badge and filename, including directory links a
 Press `S` in the browser for sorting: `n` name, `m` last modified, `c` date created, `s` size, `t` extension/type, or `r` reverse the current order. Dates start newest first and sizes largest first. Directories stay first; unavailable metadata stays last. Sorting preserves the selected entry and persists across folders and filters during the session. Creation time uses filesystem birth time on macOS and Linux where supported, never inode-change time. Directory sizes describe the directory entry, not recursive contents; symlink metadata describes the link itself.
 
 The browser filter accepts whole-filename globs such as `rec-*`, `*.txt`, `photo-??.jpg`, and `rec-[0-9]*`. Matching is case-insensitive and includes directories. Spaces inside a glob are literal. Plain queries retain ranked substring/fuzzy matching until an explicit sort is chosen. `Ctrl+U` clears the query; malformed glob patterns show an error. Hidden files remain controlled by `H`. The file-list title shows the active sort and direction; the status row shows the selected entry's sort value.
+
+## Interrupted sessions
+
+Normal quit, Ctrl+C, SIGINT, SIGTERM and SIGHUP stop peep’s media workers and restore terminal modes. Editors receive the real terminal descriptors and peep restores its UI when they exit. An uncatchable `kill -9` cannot run cleanup; if a forced kill leaves a terminal in a bad state, run `reset` in that terminal.

@@ -8,9 +8,9 @@ Go owns the browser, queue, keyboard controls, transport state, and terminal com
 - `internal/render`: ANSI true-color foreground/background pairs using the upper-half-block character; terminal-safe filenames/tags and display-width clipping.
 - `internal/tui`: event-loop state, asynchronous listing/loading, preview generations, queue, and layout. Only Bubble Tea writes terminal output.
 
-For moving media, mpv supplies audio and authoritative media time with `--vo=null`. A separate FFmpeg process decodes visual frames at 12 fps. The UI releases each frame when mpv time reaches its timestamp. Seeking or resizing cancels that visual decoder and starts another at the current position. Pausing freezes the transport and limits prefetch to the bounded channel. Still images use a monotonic application clock. A selected poster preview never plays audio.
+For moving media, mpv supplies audio and authoritative media time with `--vo=null`. A separate FFmpeg process decodes visual frames at a configurable 1–60 fps (default 12). The UI releases each frame when mpv time reaches its timestamp, drops overdue frames, and restarts a decoder that remains over a second behind after a two-second startup grace period. Seeking or resizing cancels that visual decoder and starts another at the current position. Pausing freezes the transport and limits prefetch to the bounded channel. Still images use a monotonic application clock. A selected poster preview never plays audio.
 
-This deliberately trades duplicate video decoding for a simple, isolated bootstrap path that cannot fight the TUI for stdout. It proves terminal composition and transport without native FFI. It is not the final efficiency story: a shared-decoder backend should be evaluated against the existing interfaces after measurement. Frame timestamps currently use the requested seek offset and the resampled 12 fps cadence; sample-accurate synchronization is not claimed.
+This deliberately trades duplicate video decoding for a simple, isolated bootstrap path that cannot fight the TUI for stdout. It proves terminal composition and transport without native FFI. It is not the final efficiency story: a shared-decoder backend should be evaluated against the existing interfaces after measurement. Frame timestamps currently use the requested seek offset and the configured resampling cadence; sample-accurate synchronization is not claimed.
 
 Resource limits: 10-second metadata probe, 10-second file-load deadline, 3-second IPC commands, two queued frames, 120 x 100 maximum cell decode size; native PNG limits are described below. Selection, resize, seek, and exit cancel obsolete decoder processes. Preview IDs reject late results. Filename extensions select candidate media types; FFprobe validates actual streams before playback.
 
@@ -36,7 +36,7 @@ Each block is timestamped against the same media timeline as mpv. The UI consume
 
 ## Native video and GIF frames
 
-The Kitty path streams PNG video frames at up to 1920 × 1080, sampled at 12 fps. FFmpeg keeps smaller sources at their original dimensions. A bounded PNG parser separates frames without losing bytes across pipe reads; two queued frames and a 20 MiB per-frame limit bound buffering. Frame timestamps continue to follow mpv's playback clock.
+The Kitty path streams PNG video frames at up to 1920 × 1080, sampled at the configured rate. PNG compression level 1 avoids expensive default compression while preserving lossless pixels. FFmpeg keeps smaller sources at their original dimensions. A bounded PNG parser separates frames without losing bytes across pipe reads; two queued frames and a 20 MiB per-frame limit bound buffering. Frame timestamps continue to follow mpv's playback clock.
 
 The terminal compositor refreshes changed native frames even when text is unchanged. A short deferred flush gives the text renderer an opportunity to paint first; a shared lock serializes all writes. Synchronized-output markers enclose deletion, upload, text, and placement to avoid presenting a half-updated frame. Selection, seek, resize, overlays, and exit retain the same generation/cancellation and image-ownership rules. Actual sustained frame rate and graphical-terminal playback remain host-dependent.
 
@@ -63,3 +63,9 @@ Source is limited to 128 KiB, intermediate SVG to 8 MiB, stdout to 20 MiB, stder
 `internal/installation` copies the running executable into a temporary version directory, verifies its SHA-256, and atomically changes the public symlink. Versions are content-addressed and retained for running processes. Cancellation or failed activation leaves the existing public executable intact. CLI installation can provision media dependencies through the host package manager; tests use `--no-deps` and isolated prefixes.
 
 `cmd/peep-package` builds a target executable with CGO disabled and creates a tar.gz plus checksum. README, documentation, the curated demo collection, and upstream renderer notices accompany it; notices are also embedded for `--licenses`. Package tests extract and relocate archives, install into a temporary prefix, remove the extracted source, and render through the installed executable with no tools on PATH. Native-protocol PTY tests verify image payloads and process cleanup; they do not prove a terminal emulator's actual pixels.
+
+## FPS and terminal lifecycle
+
+`F` restarts only the visual decoder at the current media position, preserving the last displayed image while it seeks. Native FPS counts completed new-frame writes over the last second; placement-only redraws do not increment it. Cell FPS counts frames accepted for rendering. Neither is a measurement of physical display refresh.
+
+The command owns SIGINT, SIGTERM and SIGHUP through the shared context, including while Bubble Tea releases the terminal to an editor. Editors receive actual stdin/stdout/stderr file descriptors so os/exec does not turn graphics/probe wrappers into pipes. After the UI and graphics writer close, a final cleanup resets terminal modes and restores the saved termios state. SIGKILL cannot be handled.

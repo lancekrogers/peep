@@ -38,3 +38,20 @@ jobs:
           path: |
             dist/*.tar.gz
             dist/*.sha256
+
+  playback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv
+      - run: go build -o bin/peep ./cmd/peep
+      - run: python3 scripts/video-playback-smoke.py
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playback-terminal-logs
+          path: tmp/acceptance/

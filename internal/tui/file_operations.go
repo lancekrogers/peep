@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -43,6 +44,10 @@ func (m *Model) beginFileOperation(operation string) tea.Cmd {
 			m.notice = err.Error()
 			return nil
 		}
+		// Editors need real terminal descriptors. Passing the graphics/probe
+		// wrappers makes os/exec create pipes (and a stdin copy goroutine that
+		// can remain blocked after the editor exits).
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 		m.editing = true
 		m.syncGraphics()
 		return tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
