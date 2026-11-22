@@ -30,7 +30,7 @@ Directory data is loaded once per navigation/hidden-file refresh. Search filters
 
 ## Audio-reactive spectrum
 
-A separate cancellable FFmpeg process provides mono 16 kHz PCM for the active music file. Goertzel analysis over Hann-windowed 512-sample blocks measures 24 logarithmically spaced frequencies from 60 Hz to 7 kHz. Levels are mapped from decibels to bar heights; the UI applies decay between observed samples. This is actual file audio, not a simulated animation or microphone capture.
+A separate cancellable FFmpeg process provides mono 48 kHz PCM for the active music file. A radix-2 FFT over Hann-windowed 8192-sample blocks measures energy in 24 logarithmic bands spanning 20 Hz–20 kHz. Windows overlap with a 2048-sample hop (about 23 updates per second), retaining sub-bass resolution and continuous treble coverage. Levels are mapped from decibels to bar heights; the UI applies decay between observed samples. This is actual file audio, not a simulated animation or microphone capture.
 
 Each block is timestamped against the same media timeline as mpv. The UI consumes it at the corresponding playback position. A two-block channel bounds decode prefetch; seeks cancel and restart the stream at the target. Pause freezes displayed levels; stop/file replacement/exit cancel analysis. Volume and mute scale the display. Analysis failure leaves playback functional and shows a visualizer-specific message. The player does not change audio frequency response.
 

@@ -36,7 +36,7 @@ Added a 1200 x 800 JPEG fixture and verified that its native PNG payload retains
 
 Folder layout tests ensure that empty preview space is reclaimed, long-name browsing remains available via `B`, and cached fuzzy filtering works without another directory read. PTY checks exercise Ctrl+F search and opening a matched folder. Existing playback, JPEG, mouse/timeline, race, and cleanup checks remain in the suite.
 
-Spectrum tests distinguish silence, a low-frequency tone, and a high-frequency tone; exercise real PCM extraction with seek timestamps and cancellation; and check paused/stopped display behavior. The PTY audio session checks that real spectrum bars are emitted during playback. Null audio output remains the automated playback device.
+Spectrum tests distinguish silence and tones from 20 Hz through 19.9 kHz, including frequencies between band centers. A real FFmpeg stream retains a 16 kHz tone and verifies overlapping-window timestamps and cancellation. UI tests cover aligned frequency labels, treble retention in narrow previews, and paused/stopped behavior. The PTY audio session checks that real spectrum bars and both hearing-range endpoints appear during playback. Null audio output remains the automated playback device.
 
 ## Native moving playback
 
@@ -64,3 +64,13 @@ The embedded-image slice passed `just check`, backend integration tests, and the
 With mmdg v0.13.0 available on the test PATH, `just test-mermaid` passed real flowchart/sequence rendering and PTY checks for fenced and standalone diagrams, source toggling, resizing, overlay restoration, invalid syntax, missing-helper fallback, and cell-only source display. PNGs extracted from the actual PTY protocol were visually inspected: labels, connections and dark backgrounds are readable. This verifies the generated images, not their placement in a graphical terminal emulator.
 
 Unit/race tests cover renderer cancellation, bounded source/output, malformed PNGs, cache reuse/eviction, replaceable fence layout, and preservation of source on failure. `just check`, `just test-integration`, `just test-tui`, and `just build-all` passed. Peep's four cross-build targets compiled with CGO disabled; the optional helper was executed on this macOS host only. No Node/browser runtime was installed, and the helper remains in ignored `tmp/tools` for testing rather than the user's global PATH.
+
+## Sustained illustrated-document scrolling
+
+`document-scroll-smoke.py` holds `j` and Down through the Night Shift guide via
+its symlink, in both cell and Kitty modes. Each session must reach the bottom
+without a backward offset jump as images and diagrams finish loading. Unit cases
+also preserve content when an asset above the viewport grows, preserve an exact
+position inside an image on reload, and keep later image completion from moving
+the viewport. The original implementation repeatedly jumped from around row 28
+to row 8 in the same PTY reproduction.
