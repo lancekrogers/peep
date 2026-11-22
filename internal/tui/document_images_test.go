@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lancekrogers/peep/internal/document"
+	"github.com/lancekrogers/peep/internal/render"
 )
 
 func documentImageModel() *Model {
@@ -14,6 +15,36 @@ func documentImageModel() *Model {
 	m.docLayout = document.Layout{Lines: []document.Line{{Text: "text", SourceLine: 0}, {Text: "after", SourceLine: 10}}, Assets: []document.Asset{{Kind: "image", Ref: "test.png", Line: 1, SourceLine: 2}}}
 	m.docImages = map[int]*documentImage{0: {image: document.Image{PNG: []byte("png"), Width: 120, Height: 96}, width: m.documentWidth(), key: 1}}
 	return m
+}
+
+func TestMermaidSourceFallbackAndReplacement(t *testing.T) {
+	m := documentImageModel()
+	m.docLayout = document.Layout{Lines: []document.Line{{Text: "flowchart LR"}, {Text: "A-->B"}, {Text: "After", SourceLine: 3}}, Assets: []document.Asset{{Kind: "mermaid", Source: "flowchart LR\nA-->B", Line: 2, ReplaceFrom: 1}}}
+	m.docImages = nil
+	lines, slots := m.documentComposition()
+	if lines[0].Text != "flowchart LR" || len(slots) != 0 {
+		t.Fatal("cells lost readable source")
+	}
+	m.graphics = &render.KittyWriter{}
+	lines, slots = m.documentComposition()
+	if lines[0].Text == "flowchart LR" || len(slots) != 1 || slots[0].start != 0 {
+		t.Fatal("diagram was hidden behind source before loading")
+	}
+	m.docImages = map[int]*documentImage{0: {err: "missing helper"}}
+	lines, _ = m.documentComposition()
+	if lines[0].Text != "flowchart LR" {
+		t.Fatal("helper failure lost source")
+	}
+	m.docImages[0] = &documentImage{image: document.Image{Width: 100, Height: 100}}
+	lines, _ = m.documentComposition()
+	if lines[0].Text == "flowchart LR" {
+		t.Fatal("offscreen PNG eviction changed diagram layout")
+	}
+	m.docSource = true
+	lines, slots = m.documentComposition()
+	if lines[0].Text != "flowchart LR" || len(slots) != 0 {
+		t.Fatal("source toggle retained graphics")
+	}
 }
 func TestDocumentImageClippingAndSource(t *testing.T) {
 	m := documentImageModel()

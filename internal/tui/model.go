@@ -51,6 +51,7 @@ type Model struct {
 	docImageCtx                               context.Context
 	docImageCancel                            context.CancelFunc
 	docImageRevision                          int
+	docMermaid                                *document.Mermaid
 	doc                                       *document.Document
 	docLayout                                 document.Layout
 	docOffset                                 int
