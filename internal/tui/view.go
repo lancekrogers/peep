@@ -58,10 +58,16 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 		if i == cursor {
 			marker = "› "
 		}
-		nameWidth := max(1, w-9)
-		row := marker + render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth) + " " + color(render.Fit(kind, 5), muted)
+		number := i + 1
+		if m.relativeNumbers && i != cursor {
+			number = max(i-cursor, cursor-i)
+		}
+		gutter := fmt.Sprintf("%*d ", len(fmt.Sprint(count)), number)
+		nameWidth := max(1, w-9-len(gutter))
+		shade := fileColor(name, kind)
+		row := marker + color(gutter, muted) + color(render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth), shade) + " " + color(render.Fit(kind, 5), shade)
 		if !queue && m.entries[i].Name == ".." {
-			row = marker + color("../ Parent directory", accent)
+			row = marker + color(gutter, muted) + color("../ Parent directory", accent)
 		}
 		if i == cursor {
 			row = fill(row, w, selectedBG)
@@ -130,7 +136,7 @@ func (m *Model) previewRows(w, h int) []string {
 	return out
 }
 func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
+	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
 		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
 	return rows
 }
@@ -148,7 +154,11 @@ func (m *Model) View() string {
 	m.syncGraphics()
 	w, h := m.width, m.height
 	if w < 35 || h < 12 {
-		return fmt.Sprintf("peep · %s\nResize to at least 35x12\nBackspace parent · Esc back\nSpace play/pause · q quit", m.state)
+		hint := "q quit"
+		if m.transportVisible() {
+			hint = "Space play/pause · " + hint
+		}
+		return fmt.Sprintf("peep\nResize to at least 35x12\nBackspace parent · Esc back\n%s", hint)
 	}
 	l := m.layout()
 	lines := []string{}
@@ -169,7 +179,7 @@ func (m *Model) View() string {
 	if m.filtering {
 		add(" " + color("/ Search files & folders: ", accent) + render.Safe(m.filter) + color("▏   Enter keep · Esc clear", muted))
 	} else {
-		add(" " + color("◉ peep", accent) + "  " + badge(mode) + "  " + color("/ Search files & folders · Ctrl+F", fg) + "  " + color("? help · q quit", muted))
+		add(" " + color("◉ peep", accent) + "  " + badge(mode) + color(m.navigationPrefix(), accent) + "  " + color("/ Search files & folders · Ctrl+F", fg) + "  " + color("? help · q quit", muted))
 	}
 	add(" " + color("‹ Backspace parent", accent) + "  " + render.Safe(m.dir))
 	if m.help {
@@ -215,38 +225,43 @@ func (m *Model) View() string {
 			add(row)
 		}
 	}
-	name := "Select a file and press Enter"
-	if m.active.Path != "" {
-		name = render.Safe(filepath.Base(m.active.Path))
+	if m.transportVisible() {
+		name := "Select a file and press Enter"
+		if m.active.Path != "" {
+			name = render.Safe(filepath.Base(m.active.Path))
+		}
+		add(" " + color("NOW PLAYING", accent) + "  " + name + color(fmt.Sprintf("  %d/%d", max(0, m.index+1), len(m.queue)), muted))
+		total := "--:--"
+		if m.duration > 0 {
+			total = stamp(m.duration)
+		}
+		audio := fmt.Sprintf("Vol %.0f%%", m.volume)
+		if m.muted {
+			audio = "Muted"
+		}
+		add(" " + color(fmt.Sprintf("[%s] %s / %s", m.state, stamp(m.position), total), accent) + color(fmt.Sprintf("    %.2gx · %s · Repeat %s", m.speed, audio, []string{"off", "one", "all"}[m.repeat]), muted))
+		n := max(1, w-4)
+		done := 0
+		if m.duration > 0 {
+			done = min(n, max(0, int(float64(n)*m.position/m.duration)))
+		}
+		bar := color(strings.Repeat("━", done), accent) + color(strings.Repeat("─", n-done), border)
+		if m.timeline {
+			bar = color("▸", accent) + bar
+		} else {
+			bar = " " + bar
+		}
+		add(" " + bar)
+		controls := " "
+		for _, b := range m.buttons() {
+			controls += fill(" "+b.label+" ", len([]rune(b.label))+2, selectedBG) + "  "
+		}
+		add(controls)
 	}
-	add(" " + color("NOW PLAYING", accent) + "  " + name + color(fmt.Sprintf("  %d/%d", max(0, m.index+1), len(m.queue)), muted))
-	total := "--:--"
-	if m.duration > 0 {
-		total = stamp(m.duration)
+	status := "Ready · / or Ctrl+F search files & folders · Enter open"
+	if m.transportVisible() {
+		status += "/play"
 	}
-	audio := fmt.Sprintf("Vol %.0f%%", m.volume)
-	if m.muted {
-		audio = "Muted"
-	}
-	add(" " + color(fmt.Sprintf("[%s] %s / %s", m.state, stamp(m.position), total), accent) + color(fmt.Sprintf("    %.2gx · %s · Repeat %s", m.speed, audio, []string{"off", "one", "all"}[m.repeat]), muted))
-	n := max(1, w-4)
-	done := 0
-	if m.duration > 0 {
-		done = min(n, max(0, int(float64(n)*m.position/m.duration)))
-	}
-	bar := color(strings.Repeat("━", done), accent) + color(strings.Repeat("─", n-done), border)
-	if m.timeline {
-		bar = color("▸", accent) + bar
-	} else {
-		bar = " " + bar
-	}
-	add(" " + bar)
-	controls := " "
-	for _, b := range m.buttons() {
-		controls += fill(" "+b.label+" ", len([]rune(b.label))+2, selectedBG) + "  "
-	}
-	add(controls)
-	status := "Ready · / or Ctrl+F search files & folders · Enter open/play"
 	if m.doc != nil {
 		status = "Enter/f read · PgUp/PgDn scroll · R source/rendered · Esc back"
 	}
@@ -258,8 +273,16 @@ func (m *Model) View() string {
 		status = "TIMELINE · ← / → seek " + m.seekLabel() + " · , change step · Shift+arrows 30s · Esc back"
 	}
 	add(" " + color(status, muted))
-	add(" " + color("↑↓ select   Enter open/play   Backspace parent   Esc back   / filter", fg))
-	add(" " + color("f focus   B browser only   Q queue   t timeline   , seek step   { / } 30s   ? all controls", muted))
+	navigation := "↑↓ select   Enter open   Backspace parent   Esc back   / filter"
+	shortcuts := "f focus   B browser only   ? all controls"
+	if m.doc != nil && m.focus {
+		navigation = "↑↓ / j/k scroll   PgUp/PgDn page   Home/End jump   Esc back   / filter"
+	}
+	if m.transportVisible() {
+		shortcuts = "f focus   B browser only   Q queue   t timeline   , seek step   { / } 30s   ? all controls"
+	}
+	add(" " + color(navigation, fg))
+	add(" " + color(shortcuts, muted))
 	return strings.Join(lines, "\n")
 }
 

@@ -47,6 +47,9 @@ type controlMsg struct {
 }
 
 type Model struct {
+	navCount                                  int
+	navG                                      bool
+	relativeNumbers                           bool
 	docImages                                 map[int]*documentImage
 	docImageCtx                               context.Context
 	docImageCancel                            context.CancelFunc
@@ -180,9 +183,15 @@ func (m *Model) previewSelection() tea.Cmd {
 	entry := m.selected()
 	if entry == nil || entry.Dir {
 		m.preview = media.Info{}
+		if !m.transportVisible() {
+			m.timeline = false
+		}
 		return nil
 	}
 	m.preview = media.Info{Path: entry.Path, Kind: entry.Kind}
+	if !m.transportVisible() {
+		m.timeline = false
+	}
 	if entry.Kind == "" {
 		return m.readDocument(entry.Path)
 	}
@@ -487,6 +496,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, cmd
 		}
 	case tickMsg:
+		hadTransport := m.transportVisible()
 		now := time.Time(v)
 		dt := now.Sub(m.last).Seconds()
 		m.last = now
@@ -523,6 +533,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		cmds := []tea.Cmd{tick()}
+		if hadTransport != m.transportVisible() {
+			m.timeline = false
+			cmds = append(cmds, m.requestDocumentImages())
+		}
 		if m.state == "Playing" {
 			for i := range m.bands {
 				target := m.bandTarget[i]

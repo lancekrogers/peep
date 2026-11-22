@@ -37,7 +37,10 @@ Without `--play`, startup is silent. Opening a directory lists files and folders
 | `j/k`, up/down | Select file; select queue entry when queue is open |
 | `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
 | `Enter` | Enter directory, focus a document, or start selected media |
-| `PgUp/PgDn` | Scroll document preview |
+| `gg`, `G`, `12G` / `12gg` | First, last, or numbered entry; rendered row in document focus |
+| `5j`, `5k`, `Ctrl+D` / `Ctrl+U` | Counted movement; half-page down / up |
+| `#` | Toggle absolute / relative file and queue numbers (selected row stays absolute) |
+| `PgUp/PgDn` | Page through document preview, otherwise file list or queue |
 | `j/k`, arrows, Home/End in document focus | Scroll document / beginning / end |
 | `R` on Markdown | Toggle styled Markdown and source |
 | `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
@@ -62,6 +65,10 @@ Without `--play`, startup is silent. Opening a directory lists files and folders
 | `?`, `q`, `Ctrl+C` | Help / quit / quit |
 
 Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
+
+File and queue rows have one-based numbers, including the parent entry. Numbers follow the current filtered list. Type colors distinguish directories, media, documents, source, configuration, archives, and PDFs; text badges remain visible. Counts appear beside the current mode and Escape cancels an unfinished command. `Ctrl+F` remains search.
+
+The transport area is hidden for folders and documents unless background media is playing, paused, or loading. Selected media, including image slideshows, retains controls. Finished playback no longer occupies the document reader.
 
 The interface uses a full-color theme, highlighted selection, bordered file/preview/queue panes, and a visible `../ Parent directory` entry. In narrow terminals the browser occupies the main pane; `f` switches to the preview. Click a file to select it, then press Enter to open or play.
 
@@ -105,6 +112,8 @@ See [architecture](docs/architecture.md) for the rendering and playback boundary
 ## Document previews
 
 Text and Markdown previews are implemented on this branch. Enter or `f` focuses a document; Escape returns to the browser. File filtering and playback controls remain available while reading. Reads are bounded to 2 MiB and layout to 12,000 rows, with explicit truncation markers. Non-UTF-8, binary, and special files are not decoded as text. Documents never enter media queues. Remote document resources are not fetched.
+
+Source and configuration files use filename-based syntax highlighting (including Go, Rust, Python, JavaScript/TypeScript, shell, JSON, YAML, TOML and Dockerfiles). Markdown code fences use their language tag, including nested fences. Unknown source types and inputs larger than 128 KiB remain plain text; expensive source-file highlighting falls back to text. Source mode stays unstyled.
 
 Markdown also displays local inline and reference-style images after their containing block. Native graphics preserve pixels and clip images when scrolling; other terminals show color cells. Missing images show an error, and remote images are not fetched. GIFs embedded in documents are still posters. `R` switches back to source.
 
