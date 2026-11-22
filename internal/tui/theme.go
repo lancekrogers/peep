@@ -29,8 +29,19 @@ func center(s string, w int) string {
 
 type layout struct{ files, preview, queue, panelHeight, body int }
 
+func (m *Model) transportVisible() bool {
+	if e := m.selected(); e != nil && !e.Dir && e.Kind != "" {
+		return true
+	}
+	return m.preview.Kind != "" || (m.active.Path != "" && (m.state == "Playing" || m.state == "Paused" || m.state == "Loading"))
+}
+
 func (m *Model) layout() layout {
-	l := layout{panelHeight: max(3, m.height-9)}
+	footer := 3
+	if m.transportVisible() {
+		footer += 4
+	}
+	l := layout{panelHeight: max(3, m.height-2-footer)}
 	l.body = l.panelHeight - 2
 	available := max(4, m.width-2)
 	if m.focus {

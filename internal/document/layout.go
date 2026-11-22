@@ -72,7 +72,11 @@ func Render(ctx context.Context, d *Document, width int, raw bool) (Layout, erro
 	var layout Layout
 	source := []byte(d.Source)
 	if raw || d.Kind != "MD" {
-		for i, line := range strings.Split(d.Source, "\n") {
+		styled := d.Source
+		if !raw {
+			styled = highlight(ctx, d.Source, d.Path, "")
+		}
+		for i, line := range strings.Split(styled, "\n") {
 			if len(layout.Lines) >= MaxLines {
 				break
 			}
@@ -125,9 +129,12 @@ func Render(ctx context.Context, d *Document, width int, raw bool) (Layout, erro
 			style.H1.Suffix = ""
 			style.CodeBlock.Chroma = nil
 			style.CodeBlock.Theme = ""
+			if len(d.Source) <= MaxHighlightBytes {
+				style.CodeBlock.Theme = "dracula"
+			}
 			zero := uint(0)
 			style.Document.Margin = &zero
-			ar := glam.NewRenderer(glam.Options{WordWrap: width, ColorProfile: termenv.TrueColor, Styles: style})
+			ar := glam.NewRenderer(glam.Options{WordWrap: width, ColorProfile: termenv.TrueColor, Styles: style, ChromaFormatter: "terminal16m"})
 			r := renderer.NewRenderer(renderer.WithNodeRenderers(util.Prioritized(ar, 1000)))
 			var out bytes.Buffer
 			if err := r.Render(&out, source, one); err != nil {

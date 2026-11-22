@@ -30,14 +30,14 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 	if y == 1 && x < 22 {
 		return m.navigate(filepath.Dir(m.dir))
 	}
-	if y == m.height-5 {
+	if m.transportVisible() && y == m.height-5 {
 		m.timeline = true
 		if m.duration > 0 {
 			return m.seek(float64(max(0, min(m.width-4, x-2))) / float64(max(1, m.width-4)) * m.duration)
 		}
 		return nil
 	}
-	if y == m.height-4 {
+	if m.transportVisible() && y == m.height-4 {
 		at := 1
 		for _, b := range m.buttons() {
 			width := ansi.StringWidth(b.label) + 2

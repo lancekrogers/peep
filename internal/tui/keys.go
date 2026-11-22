@@ -52,6 +52,13 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+	if !m.timeline {
+		if handled, cmd := m.navigationKey(key); handled {
+			return cmd
+		}
+	} else {
+		m.navCount, m.navG = 0, false
+	}
 	if m.timeline {
 		switch key {
 		case "left", "h":
@@ -103,6 +110,9 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 
 	switch key {
 	case "tab", "shift+tab", "t":
+		if !m.transportVisible() {
+			return nil
+		}
 		m.timeline = !m.timeline
 		return nil
 	case "?":
@@ -139,6 +149,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		m.showQueue = false
 		m.timeline = false
 		m.filtering = true
+		m.navCount, m.navG = 0, false
 	case "B":
 		m.browserOnly = !m.browserOnly
 		if m.browserOnly {
