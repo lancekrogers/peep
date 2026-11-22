@@ -13,7 +13,7 @@ import (
 
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
-	if key == "ctrl+c" || (!m.filtering && m.filePrompt == nil && key == "q") {
+	if key == "ctrl+c" || (!m.filtering && !m.docSearch.editing && m.filePrompt == nil && key == "q") {
 		m.clearSpectrum()
 		m.cancelDocumentImages()
 		if m.previewCancel != nil {
@@ -27,6 +27,12 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.filePrompt != nil {
 		return m.fileOperationKey(k)
 	}
+	if m.sortMenu {
+		return m.sortKey(key)
+	}
+	if m.docSearch.editing {
+		return m.searchDocumentKey(k)
+	}
 	if m.filtering {
 		switch key {
 		case "esc":
@@ -36,6 +42,8 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		case "enter":
 			m.filtering = false
 			return m.resizeFrame()
+		case "ctrl+u":
+			m.filter = ""
 		case "backspace":
 			r := []rune(m.filter)
 			if len(r) > 0 {
@@ -54,6 +62,19 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.requestDocumentImages()
 		}
 		return nil
+	}
+	if m.doc != nil && m.focus && !m.showQueue && !m.timeline {
+		switch key {
+		case "/", "ctrl+f":
+			m.docSearch.editing = true
+			m.docSearch.origin = m.docOffset
+			m.navCount, m.navG = 0, false
+			return nil
+		case "n":
+			return m.nextDocumentMatch(1)
+		case "N":
+			return m.nextDocumentMatch(-1)
+		}
 	}
 	if !m.timeline {
 		if handled, cmd := m.navigationKey(key); handled {
@@ -153,6 +174,10 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		m.timeline = false
 		m.filtering = true
 		m.navCount, m.navG = 0, false
+	case "S":
+		if !m.focus && !m.showQueue && !m.timeline {
+			m.sortMenu = true
+		}
 	case "B":
 		m.browserOnly = !m.browserOnly
 		if m.browserOnly {

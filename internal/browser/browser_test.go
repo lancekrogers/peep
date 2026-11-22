@@ -49,3 +49,42 @@ func TestFilterFoldersAndFiles(t *testing.T) {
 		t.Fatal("clearing filter lost entries")
 	}
 }
+
+func TestSymlinkIdentity(t *testing.T) {
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, "target.txt"), []byte("text"), 0600)
+	os.Mkdir(filepath.Join(dir, "target-dir"), 0700)
+	for link, target := range map[string]string{"file-link": "target.txt", "dir-link": "target-dir", "dangling": "absent"} {
+		if err := os.Symlink(target, filepath.Join(dir, link)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err := Read(dir, false, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		expected := entry.Name == "file-link" || entry.Name == "dir-link" || entry.Name == "dangling"
+		if entry.Symlink != expected {
+			t.Fatalf("symlink flag: %+v", entry)
+		}
+		if entry.Name == "dir-link" && !entry.Dir {
+			t.Fatal("directory link no longer navigable")
+		}
+	}
+}
+
+func TestGlobFiltering(t *testing.T) {
+	entries := []Entry{{Name: "rec-folder", Dir: true}, {Name: "rec-one.txt"}, {Name: "REC-two.TXT"}, {Name: "photo-01.jpg"}, {Name: "two words.txt"}, {Name: "other.go"}}
+	for _, tc := range []struct {
+		query string
+		count int
+	}{{"rec-*", 3}, {"*.txt", 3}, {"photo-??.jpg", 1}, {"rec-[ot]*", 2}, {"two *.txt", 1}, {"*", 6}, {"[", 0}, {"none*", 0}, {"two wrds", 1}} {
+		if got := Filter(entries, tc.query); len(got) != tc.count {
+			t.Fatalf("%s: %+v", tc.query, got)
+		}
+	}
+	if FilterError("[") == nil || FilterError("*.txt") != nil {
+		t.Fatal("invalid glob diagnostic")
+	}
+}

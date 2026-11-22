@@ -23,6 +23,7 @@ func (m *Model) clearDocument() {
 	m.doc = nil
 	m.docLayout = document.Layout{}
 	m.docOffset = 0
+	m.docSearch = documentSearch{}
 	m.docSource = false
 }
 func (m *Model) documentWidth() int {
@@ -87,10 +88,11 @@ func (m *Model) scrollDocument(delta int) {
 func (m *Model) documentRows(w, h int) []string {
 	lines, _ := m.documentComposition()
 	rows := make([]string, h)
+	matches := m.documentMatches()
 	for i := range rows {
 		at := m.docOffset + i
 		if at < len(lines) {
-			rows[i] = lines[at].Text
+			rows[i] = highlightDocumentMatches(lines[at].Text, at, matches, m.docSearch.index)
 		}
 	}
 	return rows

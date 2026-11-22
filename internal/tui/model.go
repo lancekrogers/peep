@@ -60,6 +60,7 @@ type Model struct {
 	doc                                       *document.Document
 	docLayout                                 document.Layout
 	docOffset                                 int
+	docSearch                                 documentSearch
 	docSource                                 bool
 	stopPending                               bool
 	seekStep                                  time.Duration
@@ -80,6 +81,8 @@ type Model struct {
 	dir                                       string
 	entries                                   []browser.Entry
 	allEntries                                []browser.Entry
+	sortField                                 browser.SortField
+	sortDescending, sortExplicit, sortMenu    bool
 	browserOnly                               bool
 	cursor, width, height                     int
 	hidden, filtering, focus, help, showQueue bool
@@ -365,6 +368,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.allEntries = v.entries
 		m.entries = browser.Filter(v.entries, m.filter)
+		m.sortEntries()
 		if m.filter == "" && filepath.Dir(m.dir) != m.dir {
 			m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
 		}
@@ -577,7 +581,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, tea.Batch(cmds...)
 		}
-		if v.Paste && !m.filtering {
+		if v.Paste && !m.filtering && !m.docSearch.editing {
 			return m, nil
 		}
 		return m, m.key(v)
@@ -613,6 +617,7 @@ func (m *Model) refilter() tea.Cmd {
 		path = e.Path
 	}
 	m.entries = browser.Filter(m.allEntries, m.filter)
+	m.sortEntries()
 	if m.filter == "" && filepath.Dir(m.dir) != m.dir {
 		m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
 	}

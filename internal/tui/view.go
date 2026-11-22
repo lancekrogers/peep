@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lancekrogers/peep/internal/browser"
 	"github.com/lancekrogers/peep/internal/document"
 	"github.com/lancekrogers/peep/internal/media"
 	"github.com/lancekrogers/peep/internal/render"
@@ -49,6 +50,9 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 				kind = "DIR"
 				name += "/"
 			}
+			if e.Symlink {
+				kind = "LINK"
+			}
 			if e.Name == ".." {
 				name = "../  Parent directory"
 				kind = "BACK"
@@ -64,8 +68,13 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 		}
 		gutter := fmt.Sprintf("%*d ", len(fmt.Sprint(count)), number)
 		nameWidth := max(1, w-9-len(gutter))
+		metadata := ""
+		if !queue && w >= 68 && m.sortField != "" && m.sortField != browser.SortName {
+			metadata = " " + color(render.Fit(render.Safe(m.entries[i].SortValue(m.sortField)), 17), muted)
+			nameWidth = max(1, nameWidth-18)
+		}
 		shade := fileColor(name, kind)
-		row := marker + color(gutter, muted) + color(render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth), shade) + " " + color(render.Fit(kind, 5), shade)
+		row := marker + color(gutter, muted) + color(render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth), shade) + " " + color(render.Fit(kind, 5), shade) + metadata
 		if !queue && m.entries[i].Name == ".." {
 			row = marker + color(gutter, muted) + color("../ Parent directory", accent)
 		}
@@ -136,7 +145,7 @@ func (m *Model) previewRows(w, h int) []string {
 	return out
 }
 func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  Files: e editor · Ctrl+R rename · M move · d/Delete confirm deletion", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
+	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  S sort: n name / m modified / c created / s size / t type / r reverse", "  / filter: fuzzy text or globs (rec-*, *.txt, photo-??.jpg)", "  Files: e editor · Ctrl+R rename · M move · d/Delete confirm deletion", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  In focused files: / or Ctrl+F find · n/N next/previous · Ctrl+U clear query", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
 		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
 	return rows
 }
@@ -154,6 +163,21 @@ func (m *Model) View() string {
 	m.syncGraphics()
 	w, h := m.width, m.height
 	if m.filePrompt != nil {
+		if m.filePrompt.operation == "delete" {
+			width := max(4, min(80, w-4))
+			content := m.fileOperationRows(width-2, max(5, h-4))
+			pane := box("Delete?", content, width, min(h, len(content)+2), true)
+			rows := make([]string, h)
+			top := max(0, (h-len(pane))/2)
+			for i := range rows {
+				row := ""
+				if i >= top && i-top < len(pane) {
+					row = strings.Repeat(" ", max(0, (w-width)/2)) + pane[i-top]
+				}
+				rows[i] = fill(row, w, bg)
+			}
+			return strings.Join(rows, "\n")
+		}
 		rows := []string{fill(" "+color("peep · file operation", accent), w, bg)}
 		rows = append(rows, box(strings.ToUpper(m.filePrompt.operation), m.fileOperationRows(w-2, max(1, h-4)), w, max(3, h-1), true)...)
 		return strings.Join(rows, "\n")
@@ -181,12 +205,24 @@ func (m *Model) View() string {
 	if m.timeline {
 		mode = "TIMELINE"
 	}
-	if m.filtering {
+	if m.sortMenu {
+		add(" " + color("Sort: n Name  m Modified  c Created", accent))
+	} else if m.docSearch.editing {
+		add(" " + color("/ Find in file: ", accent) + render.Safe(m.docSearch.query) + color("▏  "+m.documentSearchStatus()+" · Enter keep · Esc clear", muted))
+	} else if m.filtering {
 		add(" " + color("/ Search files & folders: ", accent) + render.Safe(m.filter) + color("▏   Enter keep · Esc clear", muted))
 	} else {
-		add(" " + color("◉ peep", accent) + "  " + badge(mode) + color(m.navigationPrefix(), accent) + "  " + color("/ Search files & folders · Ctrl+F", fg) + "  " + color("? help · q quit", muted))
+		searchHint := "/ Search files & folders · Ctrl+F"
+		if m.focus && m.doc != nil {
+			searchHint = "/ Find in file · Ctrl+F · n/N matches"
+		}
+		add(" " + color("◉ peep", accent) + "  " + badge(mode) + color(m.navigationPrefix(), accent) + "  " + color(searchHint, fg) + "  " + color("? help · q quit", muted))
 	}
-	add(" " + color("‹ Backspace parent", accent) + "  " + render.Safe(m.dir))
+	if m.sortMenu {
+		add(color("s Size  t Type  r Reverse  Esc cancel", accent))
+	} else {
+		add(" " + color("‹ Backspace parent", accent) + "  " + render.Safe(m.dir))
+	}
 	if m.help {
 		for _, line := range box("Keyboard & mouse", m.helpRows(w-4, l.body), w-2, l.panelHeight, true) {
 			add(" " + line)
@@ -272,19 +308,38 @@ func (m *Model) View() string {
 	}
 	if m.filter != "" || m.filtering {
 		status = "Filter: " + render.Safe(m.filter)
+		if browser.IsGlob(m.filter) {
+			status += " · glob"
+		}
+		if err := browser.FilterError(m.filter); err != nil {
+			status += " · Invalid glob: " + err.Error()
+		}
 	} else if m.notice != "" {
 		status = render.Safe(m.notice)
 	} else if m.timeline {
 		status = "TIMELINE · ← / → seek " + m.seekLabel() + " · , change step · Shift+arrows 30s · Esc back"
 	}
+	if m.focus && m.doc != nil && m.docSearch.query != "" {
+		status = "Find: " + render.Safe(m.docSearch.query) + " · " + m.documentSearchStatus() + " · n next / N previous"
+	}
+	if !m.focus && !m.showQueue && !m.filtering && !m.timeline && m.notice == "" {
+		if e := m.selected(); e != nil && e.Name != ".." && m.sortField != "" && m.sortField != browser.SortName {
+			metadata := string(m.sortField) + ": " + render.Safe(e.SortValue(m.sortField)) + " · " + render.Safe(e.Name)
+			if m.filter != "" {
+				status += " · " + metadata
+			} else {
+				status = metadata
+			}
+		}
+	}
 	add(" " + color(status, muted))
 	navigation := "↑↓ select   Enter open   Backspace parent   Esc back   / filter"
-	shortcuts := "f focus   B browser only   ? all controls"
+	shortcuts := "f focus   B browser only   S sort   ? all controls"
 	if m.doc != nil && m.focus {
-		navigation = "↑↓ / j/k scroll   PgUp/PgDn page   Home/End jump   Esc back   / filter"
+		navigation = "↑↓ / j/k scroll   PgUp/PgDn page   Home/End jump   Esc back   / find"
 	}
 	if m.transportVisible() {
-		shortcuts = "f focus   B browser only   Q queue   t timeline   , seek step   { / } 30s   ? all controls"
+		shortcuts = "f focus   B browser only   S sort   Q queue   t timeline   , seek step   { / } 30s   ? all controls"
 	}
 	add(" " + color(navigation, fg))
 	add(" " + color(shortcuts, muted))
@@ -293,7 +348,7 @@ func (m *Model) View() string {
 
 func (m *Model) fileTitle() string {
 	if m.filter != "" {
-		return fmt.Sprintf("Matches · %d / %d", len(m.entries), len(m.allEntries))
+		return fmt.Sprintf("Matches · %d / %d · %s", len(m.entries), len(m.allEntries), m.sortLabel())
 	}
-	return fmt.Sprintf("Files · %d", len(m.entries))
+	return fmt.Sprintf("Files · %d · %s", len(m.entries), m.sortLabel())
 }
