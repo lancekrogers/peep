@@ -3,7 +3,7 @@
 Your files. In focus. Browse files, preview images and video, listen to music and audiobooks, and read Markdown, source code, and Mermaid diagrams in your terminal.
 
 ```sh
-npm install -g @lancekrogers/peep
+npm install -g @obedience-corp/peep
 peep ~/Pictures
 peep --doctor
 ```
