@@ -58,10 +58,12 @@ Without `--play`, startup is silent. Opening a directory lists files and folders
 | `R` on Markdown | Toggle styled Markdown and source |
 | `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
+| `S` in browser | Sort by name, modified, created, size, or type; reverse order |
+| `/` / `Ctrl+F`, then `n` / `N` in document focus | Find text; next / previous match |
 | `e` | Open selected file in `$VISUAL`, then `$EDITOR`, or `vi` |
 | `Ctrl+R` | Rename selected entry; Ctrl+U clears the current name |
 | `M` | Move to a folder or full destination path |
-| `d` / `Delete` in browser | Delete after typing the exact entry name to confirm |
+| `d` / `Delete` in browser | Delete with a yes/no confirmation |
 | `Space`, `p` | Play/pause |
 | `s` | Stop and reset to zero |
 | `[`, `]` | Seek backward/forward by the selected step (default 5 seconds); also clickable |
@@ -81,7 +83,7 @@ Without `--play`, startup is silent. Opening a directory lists files and folders
 | `B` | Toggle full-width browser |
 | `?`, `q`, `Ctrl+C` | Help / quit / quit |
 
-Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
+Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Queries containing glob syntax instead match the whole filename (for example, `rec-*` or `*.txt`). Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
 
 File and queue rows have one-based numbers, including the parent entry. Numbers follow the current filtered list. Type colors distinguish directories, media, documents, source, configuration, archives, and PDFs; text badges remain visible. Counts appear beside the current mode and Escape cancels an unfinished command. `Ctrl+F` remains search.
 
@@ -99,7 +101,7 @@ Timelines always control the file named **NOW PLAYING**, even when the preview s
 
 Rename, move and delete operate on the selected browser entry; the parent entry is protected. Escape cancels a prompt. Rename accepts a filename; move accepts an existing folder or full path, relative to the current directory, absolute, or beginning with `~/`. Existing destinations (including dangling symlinks) are never overwritten. Moves are atomic within one filesystem; cross-filesystem moves are rejected.
 
-Deletion is permanent and requires typing the exact name. It removes files, symlinks themselves, and empty folders; non-empty folders are refused. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
+Deletion is permanent. The confirmation shows the target: `y` confirms; `n`, Enter, or Escape cancels. It removes files, symlinks themselves, and empty folders; non-empty folders are refused. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
 
 The editor command supports quoted paths and arguments, without shell expansion. The file path is passed as a separate absolute argument. For graphical editors, configure their wait flag (for example `EDITOR="code --wait"`). Peep releases the terminal while the editor runs and refreshes the listing and preview on return.
 
@@ -149,3 +151,11 @@ The renderer is pinned to v0.13.0 in peep's Go module, with embedded fonts. Peep
 Flowcharts, sequence diagrams, and class diagrams are tested. PNGs fit within 1600 × 1600 pixels; the source limit is 128 KiB and the worker deadline is eight seconds. Invalid diagrams retain readable source and an error. No links are opened and no remote image assets are fetched. `just test-mermaid` exercises the built-in renderer; `just test-package` verifies a relocated and installed package with an empty tool PATH.
 
 Development uses feature branches and reviewable PRs. Planning lives in the My_Tools campaign work item WI-aa8358 (`workflow/design/peep`).
+
+Focused text previews support `/` or `Ctrl+F` to find text in the displayed document. Search is literal and case-insensitive, with highlighted matches and a match counter. Enter keeps the search; `n` and `N` jump to the next/previous occurrence and wrap at the ends. Escape while typing clears the search and restores the original scroll position; Ctrl+U clears the query. Browser filename filtering stays separate. Use `R` to search Markdown/Mermaid source instead of rendered text.
+
+Symbolic links use a cyan `LINK` badge and filename, including directory links and dangling links; directory links still open normally.
+
+Press `S` in the browser for sorting: `n` name, `m` last modified, `c` date created, `s` size, `t` extension/type, or `r` reverse the current order. Dates start newest first and sizes largest first. Directories stay first; unavailable metadata stays last. Sorting preserves the selected entry and persists across folders and filters during the session. Creation time uses filesystem birth time on macOS and Linux where supported, never inode-change time. Directory sizes describe the directory entry, not recursive contents; symlink metadata describes the link itself.
+
+The browser filter accepts whole-filename globs such as `rec-*`, `*.txt`, `photo-??.jpg`, and `rec-[0-9]*`. Matching is case-insensitive and includes directories. Spaces inside a glob are literal. Plain queries retain ranked substring/fuzzy matching until an explicit sort is chosen. `Ctrl+U` clears the query; malformed glob patterns show an error. Hidden files remain controlled by `H`. The file-list title shows the active sort and direction; the status row shows the selected entry's sort value.

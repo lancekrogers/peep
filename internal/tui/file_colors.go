@@ -8,6 +8,8 @@ import (
 // Color reinforces the textual type badge; selection keeps its own background.
 func fileColor(name, kind string) string {
 	switch kind {
+	case "LINK":
+		return "110;210;245"
 	case "DIR", "BACK":
 		return accent
 	case "IMAGE":

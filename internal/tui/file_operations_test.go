@@ -15,27 +15,22 @@ func TestFileConfirmationAndCancel(t *testing.T) {
 	m := imageModel()
 	m.dir = dir
 	m.entries = []browser.Entry{{Name: "quit.txt", Path: path}}
-	m.beginFileOperation("delete")
-	if m.filePrompt == nil {
-		t.Fatal("missing confirmation")
-	}
-	if cmd := m.key(tea.KeyMsg{Type: tea.KeyEnter}); cmd != nil {
-		t.Fatal("empty confirmation executed")
-	}
-	m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'q'}})
-	if m.filePrompt.input != "q" {
-		t.Fatal("q did not type into confirmation")
-	}
-	m.key(tea.KeyMsg{Type: tea.KeyEsc})
-	if m.filePrompt != nil {
-		t.Fatal("cancel failed")
-	}
-	if _, err := os.Stat(path); err != nil {
-		t.Fatal("cancel deleted file")
+	for _, key := range []tea.KeyMsg{{Type: tea.KeyEnter}, {Type: tea.KeyEsc}, {Type: tea.KeyRunes, Runes: []rune("n")}, {Type: tea.KeyRunes, Runes: []rune("N")}} {
+		m.beginFileOperation("delete")
+		m.key(key)
+		if m.filePrompt != nil {
+			t.Fatal("cancel did not close prompt")
+		}
+		if _, err := os.Stat(path); err != nil {
+			t.Fatal("cancel deleted file")
+		}
 	}
 	m.beginFileOperation("delete")
-	m.filePrompt.input = "quit.txt"
-	cmd := m.key(tea.KeyMsg{Type: tea.KeyEnter})
+	m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
+	if m.filePrompt == nil || m.filePrompt.working || m.filePrompt.input != "" {
+		t.Fatal("unrelated key changed confirmation")
+	}
+	cmd := m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("y")})
 	if cmd == nil {
 		t.Fatal("confirmed delete did nothing")
 	}

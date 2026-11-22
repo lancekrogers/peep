@@ -24,6 +24,11 @@ test-tui: build fixtures
     python3 scripts/gif-replay-smoke.py
     python3 scripts/document-smoke.py
     python3 scripts/browser-smoke.py
+    python3 scripts/explorer-smoke.py
+
+# Browser filters, sorting, symlinks, and focused text search.
+test-explorer: build
+    python3 scripts/explorer-smoke.py
 
 # GIF replay and directory switching regressions.
 test-gif-replay: build fixtures

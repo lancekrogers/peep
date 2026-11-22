@@ -70,7 +70,19 @@ func (m *Model) fileOperationKey(k tea.KeyMsg) tea.Cmd {
 	if p.working {
 		return nil
 	}
-	switch k.String() {
+	key := k.String()
+	if p.operation == "delete" {
+		switch key {
+		case "y", "Y":
+			key = "enter"
+		case "n", "N", "esc", "enter":
+			m.filePrompt = nil
+			return m.requestDocumentImages()
+		default:
+			return nil
+		}
+	}
+	switch key {
 	case "esc":
 		m.filePrompt = nil
 		return m.requestDocumentImages()
@@ -82,10 +94,6 @@ func (m *Model) fileOperationKey(k tea.KeyMsg) tea.Cmd {
 			p.input = string(r[:len(r)-1])
 		}
 	case "enter":
-		if p.operation == "delete" && p.input != filepath.Base(p.target.Path) {
-			p.problem = "Type the exact name to confirm, or Esc to cancel"
-			return nil
-		}
 		destination := ""
 		if p.operation != "delete" {
 			var err error
@@ -122,7 +130,8 @@ func (m *Model) fileOperationRows(w, h int) []string {
 		detail = "Destination folder/path; same filesystem; no overwrites."
 	}
 	if p.operation == "delete" {
-		detail = "Permanently delete: type the exact name. Folders must be empty."
+		heading = "Are you sure you want to delete " + render.Safe(filepath.Base(p.target.Path)) + "?"
+		detail = render.Safe(p.target.Path) + "\n\nPermanent deletion. Folders must be empty."
 	}
 	var wrapped []string
 	for _, row := range []string{heading, "", detail} {
@@ -135,6 +144,9 @@ func (m *Model) fileOperationRows(w, h int) []string {
 	problem := render.Safe(p.problem)
 	if p.working {
 		problem = "Working…"
+	}
+	if p.operation == "delete" {
+		return append(wrapped, "", color(problem, accent), color("y Yes, delete", accent)+"    n / Enter / Esc Cancel")
 	}
 	wrapped = append(wrapped, color("> "+render.Safe(p.input)+"▏", fg), color(problem, accent), "Enter confirm · Esc cancel · Ctrl+U clear")
 	return wrapped

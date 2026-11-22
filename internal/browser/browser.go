@@ -4,16 +4,20 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
+	"time"
 
 	"github.com/lancekrogers/peep/internal/media"
 )
 
 type Entry struct {
-	Path, Name string
-	Dir        bool
-	Kind       media.Kind
+	Path, Name        string
+	Dir               bool
+	Symlink           bool
+	Kind              media.Kind
+	Modified, Created time.Time
+	Size              int64
+	Metadata          bool
 }
 
 func Read(path string, hidden bool, filter string) ([]Entry, error) {
@@ -24,9 +28,6 @@ func Read(path string, hidden bool, filter string) ([]Entry, error) {
 	entries := []Entry{}
 	for _, d := range dirs {
 		if !hidden && strings.HasPrefix(d.Name(), ".") {
-			continue
-		}
-		if !strings.Contains(strings.ToLower(d.Name()), strings.ToLower(filter)) {
 			continue
 		}
 		full := filepath.Join(path, d.Name())
@@ -40,13 +41,16 @@ func Read(path string, hidden bool, filter string) ([]Entry, error) {
 		if st, err := os.Stat(full); err != nil || !st.Mode().IsRegular() {
 			kind = ""
 		}
-		entries = append(entries, Entry{Path: full, Name: d.Name(), Dir: dir, Kind: kind})
-	}
-	sort.SliceStable(entries, func(i, j int) bool {
-		if entries[i].Dir != entries[j].Dir {
-			return entries[i].Dir
+		entry := Entry{Path: full, Name: d.Name(), Dir: dir, Symlink: d.Type()&os.ModeSymlink != 0, Kind: kind}
+		if info, err := d.Info(); err == nil {
+			entry.Metadata = true
+			entry.Modified, entry.Size, entry.Created = info.ModTime(), info.Size(), createdTime(full, info)
 		}
-		return strings.ToLower(entries[i].Name) < strings.ToLower(entries[j].Name)
-	})
-	return entries, nil
+		entries = append(entries, entry)
+	}
+	Sort(entries, SortName, false)
+	if err := FilterError(filter); err != nil {
+		return nil, fmt.Errorf("invalid filename pattern: %w", err)
+	}
+	return Filter(entries, filter), nil
 }

@@ -28,9 +28,10 @@ try:
  assert not (folder/'renamed file.txt').exists() and (folder/'destination/renamed file.txt').exists()
  # Search into the destination, then select the file to delete.
  s.send(b'/destination');s.expect(b'Filter: destination');s.send(b'\r');s.read(.2);s.send(b'\r');s.expect(b'renamed file.txt')
- s.send(b'd');s.expect(b'Permanently delete');s.send(b'\r');s.expect(b'Type the exact name')
- s.send(b'\x1b');s.read(.2);assert (folder/'destination/renamed file.txt').exists()
- s.send(b'd');s.expect(b'Permanently delete');s.send(b'renamed file.txt\r');s.expect(b'delete complete')
+ for cancel in (b'n', b'\r', b'\x1b'):
+  s.send(b'd');s.expect(b'Are you sure you want to delete');s.send(cancel);s.read(.2)
+  assert (folder/'destination/renamed file.txt').exists()
+ s.send(b'd');s.expect(b'Are you sure you want to delete');s.send(b'y');s.expect(b'delete complete')
  assert not (folder/'destination/renamed file.txt').exists()
  s.finish()
  s=Session('editor-failure',str(folder/'keep.txt'),env_override={'VISUAL':'peep-editor-that-does-not-exist'})

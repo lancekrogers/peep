@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -8,6 +9,19 @@ import (
 // Filter ranks case-insensitive substring and fuzzy subsequence matches in an
 // already loaded directory. Whitespace-separated terms must all match.
 func Filter(entries []Entry, query string) []Entry {
+	if IsGlob(query) {
+		out := []Entry{}
+		for _, entry := range entries {
+			matched, err := filepath.Match(strings.ToLower(query), strings.ToLower(entry.Name))
+			if err != nil {
+				return nil
+			}
+			if matched {
+				out = append(out, entry)
+			}
+		}
+		return out
+	}
 	terms := strings.Fields(strings.ToLower(query))
 	if len(terms) == 0 {
 		return append([]Entry(nil), entries...)
@@ -56,4 +70,15 @@ func matchScore(name, term string) (int, bool) {
 		}
 	}
 	return 1000 + gaps, at == len(want)
+}
+
+// A glob matches the entire filename, including spaces. Ordinary text keeps the
+// existing ranked substring/fuzzy search. Matching is case-insensitive.
+func IsGlob(query string) bool { return strings.ContainsAny(query, "*?[\\") }
+func FilterError(query string) error {
+	if !IsGlob(query) {
+		return nil
+	}
+	_, err := filepath.Match(query, "")
+	return err
 }
