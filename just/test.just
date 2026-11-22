@@ -31,3 +31,8 @@ test-gif-replay: build fixtures
 # Focused document-preview acceptance, including playback while reading.
 test-documents: build fixtures
     python3 scripts/document-smoke.py
+
+# Actual optional renderer plus native-protocol TUI checks (mmdg must be on PATH).
+test-mermaid: build
+    PEEP_MERMAID_BIN="$(command -v mmdg)" go test -race -count=1 -run Mermaid ./internal/document
+    python3 scripts/mermaid-smoke.py

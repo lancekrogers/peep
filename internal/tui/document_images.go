@@ -41,16 +41,30 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 	}
 	lines := make([]document.Line, 0, len(m.docLayout.Lines))
 	var slots []documentSlot
+	skip := make(map[int]bool)
+	for index, a := range m.docLayout.Assets {
+		entry := m.docImages[index]
+		if a.Kind == "mermaid" && a.ReplaceFrom > 0 && m.graphics != nil && (entry == nil || entry.err == "") {
+			for row := a.ReplaceFrom - 1; row < a.Line; row++ {
+				skip[row] = true
+			}
+		}
+	}
 	asset := 0
 	for i := 0; i <= len(m.docLayout.Lines); i++ {
 		for asset < len(m.docLayout.Assets) && m.docLayout.Assets[asset].Line == i {
 			a := m.docLayout.Assets[asset]
-			if a.Kind == "image" {
+			if a.Kind == "image" || a.Kind == "mermaid" {
+				if a.Kind == "mermaid" && m.graphics == nil {
+					lines = append(lines, document.Line{Text: color("Mermaid source · diagram needs native graphics", muted), SourceLine: a.SourceLine})
+					asset++
+					continue
+				}
 				entry := m.docImages[asset]
 				rows, cols := 6, min(120, m.documentWidth())
 				if entry != nil && entry.err != "" {
 					slots = append(slots, documentSlot{asset, len(lines), 1, cols})
-					lines = append(lines, document.Line{Text: color("Image: "+render.Safe(entry.err), muted), SourceLine: a.SourceLine})
+					lines = append(lines, document.Line{Text: color(render.Safe(entry.err), muted), SourceLine: a.SourceLine})
 				} else {
 					if entry != nil && entry.image.Width > 0 {
 						cols, rows = document.FitImage(entry.image.Width, entry.image.Height, m.documentWidth())
@@ -60,7 +74,7 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 						text := ""
 						if entry == nil || entry.loading || len(entry.image.PNG) == 0 {
 							if y == 0 {
-								text = color("Loading image · "+render.Safe(a.Alt), muted)
+								text = color("Loading "+a.Kind+" · "+render.Safe(a.Alt), muted)
 							}
 						} else if m.graphics == nil && entry.width == m.documentWidth() && y < len(entry.image.Cells) {
 							text = entry.image.Cells[y]
@@ -71,7 +85,7 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 			}
 			asset++
 		}
-		if i < len(m.docLayout.Lines) {
+		if i < len(m.docLayout.Lines) && !skip[i] {
 			lines = append(lines, m.docLayout.Lines[i])
 		}
 	}
@@ -108,6 +122,10 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 	if m.docImageCancel == nil {
 		m.docImageCtx, m.docImageCancel = context.WithCancel(m.ctx)
 	}
+	if m.docMermaid == nil {
+		m.docMermaid = document.NewMermaid("mmdg")
+	}
+	renderer := m.docMermaid
 	var cmds []tea.Cmd
 	for _, slot := range slots {
 		i := slot.index
@@ -140,6 +158,8 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 			var err error
 			if len(cached) > 0 {
 				im, err = document.ImageFromPNG(cached, width)
+			} else if source.Kind == "mermaid" {
+				im, err = renderer.Render(child, source.Source, width)
 			} else {
 				var resolved string
 				resolved, err = document.ResolveImage(path, source.Ref)

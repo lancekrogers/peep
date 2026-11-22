@@ -108,4 +108,13 @@ Text and Markdown previews are implemented on this branch. Enter or `f` focuses 
 
 Markdown also displays local inline and reference-style images after their containing block. Native graphics preserve pixels and clip images when scrolling; other terminals show color cells. Missing images show an error, and remote images are not fetched. GIFs embedded in documents are still posters. `R` switches back to source.
 
-Optional native Mermaid rendering is the next slice in the [file preview proposal](docs/file-previews.md). Development uses feature branches and reviewable PRs.
+Mermaid fences and `.mmd`/`.mermaid` files render through the optional [mmdg](https://github.com/bvolpato/mermaid-go-renderer) helper when native graphics are available. `R` switches between diagram and source. Missing helpers, invalid diagrams and cell-only terminals keep readable source with an explanation. Top-level fences are replaced by diagrams; diagrams in lists/quotes appear after their containing block, preserving the surrounding text.
+
+```sh
+just install-mermaid  # optional; installs pinned mmdg v0.13.0, requires Go 1.27+
+peep --doctor        # reports whether the optional helper is on PATH
+```
+
+Peep itself still builds with Go 1.24+ and CGO disabled. The helper needs neither Node nor a browser; it does include an embedded Goja JavaScript engine. It is an independent installation, not a dependency of peep's Go module. Flowcharts and sequence diagrams are verified; other Mermaid types depend on the helper's support. Mermaid renders use a dark background, embedded fonts, bounded input/output and a cancellable deadline. No links are opened and no remote image assets are fetched.
+
+Development uses feature branches and reviewable PRs. The [file preview proposal](docs/file-previews.md) records the scope and decisions.

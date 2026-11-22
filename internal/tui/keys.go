@@ -71,7 +71,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.doc != nil && !m.showQueue {
 		switch key {
 		case "R":
-			if m.doc.Kind == "MD" {
+			if m.doc.Kind == "MD" || m.doc.Kind == "MMD" {
 				m.docSource = !m.docSource
 				return m.reflowDocument()
 			}
