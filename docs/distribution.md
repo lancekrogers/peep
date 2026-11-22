@@ -4,14 +4,13 @@ peep ships one Go executable, with Mermaid built in, for macOS and Linux on
 arm64 and x86-64. Releases include the MIT license and third-party notices.
 FFmpeg and mpv provide media decoding and playback.
 
-| Channel | Planned install command | Media dependencies |
+| Channel | Install command | Media dependencies |
 | --- | --- | --- |
 | Homebrew tap | `brew install lancekrogers/tap/peep` | Installed by Homebrew |
 | npm | `npm install -g @obedience-corp/peep` | Install FFmpeg and mpv separately |
 | AUR | `yay -S peep-tui-bin` | Installed by the AUR helper |
 
-These commands become available after the first release is published to each
-channel. The executable is always `peep`. The unscoped npm name `peep` and AUR
+The executable is always `peep`. The unscoped npm name `peep` and AUR
 names `peep`/`peep-bin` belong to unrelated projects.
 
 ## Build and verify

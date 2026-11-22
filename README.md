@@ -26,18 +26,53 @@ https://github.com/user-attachments/assets/7cfbda66-c8d0-4ab9-9766-4a7b1b02f94b
 
 ## Get started
 
-Source builds need **Go 1.27+** and **just**. FFmpeg and mpv handle media;
-`just install` sets them up through your supported package manager if missing.
+Choose an install method:
+
+**Homebrew · macOS / Linux**
+
+```sh
+brew install lancekrogers/tap/peep
+```
+
+**npm · macOS / Linux** (Node 22+)
+
+```sh
+npm install -g @obedience-corp/peep
+```
+
+**AUR · Arch Linux**
+
+```sh
+yay -S peep-tui-bin
+# or: paru -S peep-tui-bin
+```
+
+Homebrew and AUR install FFmpeg and mpv for media playback. With npm, install
+those tools separately through your system package manager. Mermaid is built in.
+
+```sh
+peep              # Browse the current directory
+peep ~/Pictures   # Browse a directory (peep <path>)
+peep README.md     # Preview a file
+peep --doctor     # Check media dependencies and terminal support
+```
+
+[Installation details and release archives →](docs/install.md)
+
+<details>
+<summary>Install from source</summary>
+
+Requires **Go 1.27+** and **just**. `just install` sets up missing media tools
+through your supported package manager.
 
 ```sh
 git clone https://github.com/lancekrogers/peep.git
 cd peep
 just install
-~/.local/bin/peep ~/Pictures
+~/.local/bin/peep
 ```
 
-Mermaid rendering and fonts are built in. No Node, browser, or separate diagram
-helper. [Installation details and archive installs →](docs/install.md)
+</details>
 
 ## Take a peep
 
