@@ -7,7 +7,7 @@ FFmpeg and mpv provide media decoding and playback.
 | Channel | Planned install command | Media dependencies |
 | --- | --- | --- |
 | Homebrew tap | `brew install lancekrogers/tap/peep` | Installed by Homebrew |
-| npm | `npm install -g @lancekrogers/peep` | Install FFmpeg and mpv separately |
+| npm | `npm install -g @obedience-corp/peep` | Install FFmpeg and mpv separately |
 | AUR | `yay -S peep-tui-bin` | Installed by the AUR helper |
 
 These commands become available after the first release is published to each
@@ -43,9 +43,12 @@ global installation.
 
 ## One-time publishing setup
 
+The existing `@obedience-corp` npm organization is used independently of the
+personal GitHub repository. The existing AUR maintainer account is `obediencecorp`.
+
 1. Make the repository public when ready to launch. Package publishing refuses
    a private repository because Homebrew/AUR download URLs must be public.
-2. Confirm ownership of the npm scope `@lancekrogers`. Publish all four native
+2. Confirm ownership of the npm scope `@obedience-corp`. Publish all four native
    packages before the command package. For the initial publication, use an
    authenticated npm CLI locally or a short-lived `NPM_TOKEN` GitHub environment
    secret with package creation rights. Follow npm's account/2FA requirements.
@@ -55,7 +58,8 @@ global installation.
    token. The workflow uses Node 24 with its bundled modern npm.
 4. In GitHub's `distribution` environment, add `HOMEBREW_TAP_TOKEN` with contents
    and pull-request write access to `lancekrogers/homebrew-tap`.
-5. Register an AUR account and SSH key with write access to `peep-tui-bin`.
+5. Use the existing AUR account `obediencecorp` and register a dedicated
+   publishing SSH key with write access to `peep-tui-bin`.
    Add environment secrets `AUR_SSH_KEY`, `AUR_EMAIL`, and `AUR_KNOWN_HOSTS`.
    Verify the AUR SSH host fingerprint through Arch's published information
    before storing its known-hosts entry. The workflow never accepts a new host
