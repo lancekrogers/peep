@@ -7,6 +7,21 @@ import (
 )
 
 func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
+	if m.doc != nil && !m.help && (msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown) {
+		l := m.layout()
+		x := 1
+		if l.files > 0 {
+			x += l.files + 1
+		}
+		if l.preview > 0 && msg.X >= x && msg.X < x+l.preview && msg.Y >= 3 && msg.Y < 3+l.body {
+			delta := 3
+			if msg.Button == tea.MouseButtonWheelUp {
+				delta = -3
+			}
+			m.scrollDocument(delta)
+		}
+		return nil
+	}
 	if msg.Action != tea.MouseActionPress || msg.Button != tea.MouseButtonLeft || m.help {
 		return nil
 	}

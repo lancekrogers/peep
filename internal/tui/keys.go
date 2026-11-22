@@ -66,6 +66,38 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.seek(m.duration)
 		}
 	}
+	if m.doc != nil && !m.showQueue {
+		switch key {
+		case "R":
+			if m.doc.Kind == "MD" {
+				m.docSource = !m.docSource
+				return m.reflowDocument()
+			}
+		case "pgdown":
+			m.scrollDocument(m.layout().body - 1)
+			return nil
+		case "pgup":
+			m.scrollDocument(1 - m.layout().body)
+			return nil
+		}
+		if m.focus && !m.timeline {
+			switch key {
+			case "j", "down":
+				m.scrollDocument(1)
+				return nil
+			case "k", "up":
+				m.scrollDocument(-1)
+				return nil
+			case "home":
+				m.scrollDocument(-len(m.docLayout.Lines))
+				return nil
+			case "end":
+				m.scrollDocument(len(m.docLayout.Lines))
+				return nil
+			}
+		}
+	}
+
 	switch key {
 	case "tab", "shift+tab", "t":
 		m.timeline = !m.timeline
@@ -81,7 +113,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			m.showQueue = false
 		} else if m.focus {
 			m.focus = false
-			return m.previewSelection()
+			return m.resizeFrame()
 		} else if m.filter != "" {
 			m.filter = ""
 			return m.refilter()
@@ -139,6 +171,13 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.navigate(e.Path)
 		}
 	case "enter":
+		if !m.showQueue {
+			if e := m.selected(); e != nil && !e.Dir && e.Kind == "" {
+				m.focus = true
+				m.browserOnly = false
+				return m.resizeFrame()
+			}
+		}
 		if m.busy {
 			return nil
 		}
@@ -153,7 +192,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.queueFromSelection()
 		}
 	case "a":
-		if e := m.selected(); e != nil && !e.Dir {
+		if e := m.selected(); e != nil && !e.Dir && e.Kind != "" {
 			m.queue = append(m.queue, e.Path)
 			m.notice = "Added to queue"
 		}
@@ -276,6 +315,9 @@ func (m *Model) navigate(dir string) tea.Cmd {
 	return m.readDir()
 }
 func (m *Model) resizeFrame() tea.Cmd {
+	if m.doc != nil && !m.displayingActive {
+		return m.reflowDocument()
+	}
 	if m.displayingActive {
 		return m.showActive()
 	}

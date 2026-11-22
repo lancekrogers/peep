@@ -9,6 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/lancekrogers/peep/internal/browser"
+	"github.com/lancekrogers/peep/internal/document"
 	"github.com/lancekrogers/peep/internal/media"
 	"github.com/lancekrogers/peep/internal/player"
 	"github.com/lancekrogers/peep/internal/render"
@@ -46,6 +47,10 @@ type controlMsg struct {
 }
 
 type Model struct {
+	doc                                       *document.Document
+	docLayout                                 document.Layout
+	docOffset                                 int
+	docSource                                 bool
 	stopPending                               bool
 	seekStep                                  time.Duration
 	spectrum                                  <-chan media.SpectrumFrame
@@ -117,6 +122,15 @@ func New(ctx context.Context, p *player.Player, paths []string, play bool, notic
 		}
 	}
 	if play {
+		for _, path := range paths {
+			st, err := os.Stat(path)
+			if err != nil {
+				return nil, err
+			}
+			if !st.IsDir() && (!st.Mode().IsRegular() || media.Classify(path) == "") {
+				return nil, fmt.Errorf("not playable media: %s (omit --play to preview)", filepath.Base(path))
+			}
+		}
 		m.queue = append([]string(nil), paths...)
 		if len(paths) == 0 {
 			m.queue = nil
@@ -144,6 +158,10 @@ func (m *Model) selected() *browser.Entry {
 	return &m.entries[m.cursor]
 }
 func (m *Model) previewSelection() tea.Cmd {
+	if e := m.selected(); e != nil && m.doc != nil && m.doc.Path == e.Path && !m.displayingActive {
+		return m.reflowDocument()
+	}
+	m.clearDocument()
 	if m.previewCancel != nil {
 		m.previewCancel()
 	}
@@ -160,6 +178,9 @@ func (m *Model) previewSelection() tea.Cmd {
 		return nil
 	}
 	m.preview = media.Info{Path: entry.Path, Kind: entry.Kind}
+	if entry.Kind == "" {
+		return m.readDocument(entry.Path)
+	}
 	ctx, cancel := context.WithCancel(m.ctx)
 	m.previewCancel = cancel
 	id, path := m.previewID, entry.Path
@@ -174,6 +195,7 @@ func (m *Model) dimensions() (int, int) {
 	return max(4, min(w-2, 120)), max(2, min(l.body*2, 100))
 }
 func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd {
+	m.clearDocument()
 	if m.previewCancel != nil {
 		m.previewCancel()
 	}
@@ -220,13 +242,13 @@ func (m *Model) showActive() tea.Cmd {
 }
 func (m *Model) queueFromSelection() tea.Cmd {
 	e := m.selected()
-	if e == nil || e.Dir {
+	if e == nil || e.Dir || e.Kind == "" {
 		return nil
 	}
 	m.queue = nil
 	idx := 0
 	for _, entry := range m.entries {
-		if !entry.Dir {
+		if !entry.Dir && entry.Kind != "" {
 			if entry.Path == e.Path {
 				idx = len(m.queue)
 			}
@@ -240,14 +262,16 @@ func (m *Model) loadState(index int, desired string) tea.Cmd {
 	if m.busy || index < 0 || index >= len(m.queue) {
 		return nil
 	}
-	if m.previewCancel != nil {
-		m.previewCancel()
+	if m.doc == nil {
+		if m.previewCancel != nil {
+			m.previewCancel()
+		}
+		m.frames = nil
+		m.pending = nil
+		m.rows = nil
+		m.nativePNG = nil
+		m.previewID++
 	}
-	m.frames = nil
-	m.pending = nil
-	m.rows = nil
-	m.nativePNG = nil
-	m.previewID++
 	m.clearSpectrum()
 	m.index = index
 	m.queueCursor = index
@@ -296,6 +320,11 @@ func (m *Model) control(fn func(context.Context, *player.Player) error, seek *fl
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
+	case documentMsg:
+		if v.id == m.previewID {
+			m.applyDocument(v)
+		}
+		return m, nil
 	case tea.WindowSizeMsg:
 		m.width = max(1, v.Width)
 		m.height = max(1, v.Height)
@@ -336,9 +365,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if len(m.queue) > 0 {
 				return m, m.load(0)
 			}
-			if e := m.selected(); e == nil || e.Dir {
+			if e := m.selected(); e == nil || e.Dir || e.Kind == "" {
 				for i, entry := range m.entries {
-					if !entry.Dir {
+					if !entry.Dir && entry.Kind != "" {
 						m.cursor = i
 						break
 					}
@@ -426,6 +455,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.state = m.startState
 		m.last = time.Now()
+		if m.doc != nil && !m.displayingActive {
+			return m, m.startSpectrum()
+		}
 		return m, tea.Batch(m.showActive(), m.startSpectrum())
 	case controlMsg:
 		m.busy = false
