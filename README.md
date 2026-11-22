@@ -16,7 +16,7 @@ Markdown document—without leaving the terminal.
 
 https://github.com/user-attachments/assets/7cfbda66-c8d0-4ab9-9766-4a7b1b02f94b
 
-*74-second demo · 1080p · Play above to watch without leaving the README.*
+*74-second demo watch with sound on.*
 
 - **Browse** with Vim navigation, numbered jumps, sorting, fuzzy search, and globs.
 - **Watch** images, animated GIFs, and videos with native terminal graphics.
