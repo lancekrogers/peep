@@ -11,16 +11,13 @@ import (
 )
 
 func TestRendererSelection(t *testing.T) {
-	for _, c := range []struct {
-		env  map[string]string
-		want string
-	}{{map[string]string{"TERM_PROGRAM": "ghostty"}, "kitty"}, {map[string]string{"KITTY_WINDOW_ID": "1"}, "kitty"}, {map[string]string{"TERM_PROGRAM": "ghostty", "TMUX": "session"}, "cells"}, {map[string]string{}, "cells"}} {
-		got, err := Renderer("auto", func(k string) string { return c.env[k] })
-		if err != nil || got != c.want {
-			t.Fatalf("%v: %s %v", c.env, got, err)
+	for _, tt := range []struct{ request, want string }{{"auto", "cells"}, {"cells", "cells"}, {"kitty", "kitty"}} {
+		got, err := Renderer(tt.request)
+		if err != nil || got != tt.want {
+			t.Fatalf("%s: %s %v", tt.request, got, err)
 		}
 	}
-	if _, err := Renderer("invalid", func(string) string { return "" }); err == nil {
+	if _, err := Renderer("invalid"); err == nil {
 		t.Fatal("invalid renderer accepted")
 	}
 }

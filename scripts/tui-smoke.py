@@ -19,12 +19,13 @@ ARTIFACTS = ROOT / 'tmp' / 'acceptance'
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
 class Session:
-    def __init__(self, name, *args):
+    def __init__(self, name, *args, env_override=None):
         self.name = name
         self.master, self.slave = pty.openpty()
         self.original = termios.tcgetattr(self.slave)
         self.resize(110, 30, notify=False)
         env = dict(os.environ, TERM='xterm-256color', COLORTERM='truecolor')
+        if env_override is not None: env.update(env_override)
         def terminal():
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
@@ -147,6 +148,38 @@ try:
     assert b'\xe2\x96\x80' not in s.log, 'native video used cell pixels'
     s.send(b' ');s.expect(b'[Paused]');s.send(b']');s.expect(b'00:06 / 00:08')
     s.send(b's');s.expect(b'[Stopped] 00:00');s.finish()
+    probe_env = dict(TERM_PROGRAM='unknown', KITTY_WINDOW_ID='', TMUX='', STY='')
+    s=Session('detect-native','--renderer=auto','tmp/fixtures/07-detail.jpg',env_override=probe_env);sessions.append(s)
+    data=s.expect(b'a=q',timeout=8)
+    query_id=re.search(rb'\x1b_Gi=(\d+),s=1,v=1,a=q',data).group(1)
+    # Fragment the reply and interleave real startup search input.
+    os.write(s.master,b'/detail'+b'\x1b_Gi='+query_id+b';')
+    time.sleep(.005)
+    os.write(s.master,b'OK\x1b\\\r')
+    s.expect(b'a=t,f=100')
+    assert b'Filter: detail' in re.sub(rb'\x1b\[[0-?]*[ -/]*[@-~]',b'',s.log), 'startup keys lost'
+    s.send(b'\x1b');s.read(.2);s.finish()
+    s=Session('detect-fallback','--renderer=auto','tmp/fixtures/07-detail.jpg',env_override=dict(probe_env,TERM_PROGRAM='ghostty'));sessions.append(s)
+    data=s.expect(b'a=q',timeout=8)
+    query_id=re.search(rb'\x1b_Gi=(\d+),s=1,v=1,a=q',data).group(1)
+    os.write(s.master,b'\x1b_Gi='+query_id+b';EINVAL: unsupported\x1b\\')
+
+    if b'\xe2\x96\x80' not in s.log:s.expect(b'\xe2\x96\x80')
+    s.read(.5)
+    assert b'a=t,f=100' not in s.log, 'negative query selected native'
+    s.finish()
+    s=Session('detect-timeout','--renderer=auto','tmp/fixtures/07-detail.jpg',env_override=probe_env);sessions.append(s)
+    s.expect(b'a=q',timeout=8)
+    if b'\xe2\x96\x80' not in s.log:s.expect(b'\xe2\x96\x80')
+    s.read(.5)
+    assert b'a=t,f=100' not in s.log, 'unanswered query selected native'
+    s.finish()
+    s=Session('custom-seek','--seek-step=1s','--play','tmp/fixtures/03-video.mp4');sessions.append(s)
+    s.expect(b'[Playing]');s.send(b' ');s.expect(b'[Paused]');s.send(b'0');s.read(.3)
+    s.send(b']');s.expect(b'00:01 / 00:08')
+    assert b'-1s' in s.log, 'custom jump label missing'
+    s.send(b',');s.expect(b'Seek step 5s');s.send(b']');s.expect(b'00:06 / 00:08')
+    s.send(b't');s.send(b'\x1b[D');s.expect(b'00:01 / 00:08');s.finish()
     s=Session('mixed','--play','tmp/fixtures/01-image.png','tmp/fixtures/02-animation.gif','tmp/fixtures/03-video.mp4','tmp/fixtures/04-audio.wav');sessions.append(s)
     s.expect(b'[Playing]');s.expect(b'NOW PLAYING  02-animation.gif',timeout=8)
     s.expect(b'NOW PLAYING  03-video.mp4',timeout=6)

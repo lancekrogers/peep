@@ -22,7 +22,7 @@ The PTY harness sets `TERM=xterm-256color` and `COLORTERM=truecolor`, starts at 
 
 The harness is a real pseudo-terminal, not a named graphical terminal emulator. It verifies terminal I/O and state transitions, not how every emulator displays the cells. mpv tests use its null audio output; speaker output and perceptual audio/video synchronization were not audited. The renderer targets 12 fps, but no sustained frame-rate or CPU benchmark is claimed. Kitty graphics, tmux, SSH audio forwarding, Windows, subtitles, and a codec matrix beyond the listed fixtures remain unverified or unimplemented.
 
-The bootstrap proof established that separate frame decoding can coexist with live TUI controls, seeking, resizing, and clean shutdown. Native-resolution graphics and a more efficient shared decoder are follow-up implementation work, not claims of this version.
+The bootstrap proof established that separate frame decoding can coexist with live TUI controls, seeking, resizing, and clean shutdown. Native-resolution graphics were added in the follow-ups below; a more efficient shared decoder remains future work.
 
 ## Usability and JPEG follow-up
 
@@ -41,3 +41,9 @@ Spectrum tests distinguish silence, a low-frequency tone, and a high-frequency t
 ## Native moving playback
 
 Added a 1280 × 720 video fixture and verified that native PNG frames retain its dimensions and advance timestamps. Compositor tests ensure changed graphics are flushed without requiring a text redraw. The native-video PTY session checks repeated uploads, absence of cell pixels, play/pause, seek, stop, and cleanup. This verifies the transport and protocol; it does not substitute for visual inspection in the user's terminal.
+
+## Capability detection and adjustable seeking
+
+Auto mode now tests Kitty support at startup, with a 350 ms timeout and explicit renderer overrides. Protocol parser tests preserve unrelated keys/replies and cover rejection, cancellation, and timeout. The PTY suite exercises an unknown client with a fragmented positive response and simultaneous search input, a negative response despite a Ghostty environment hint, and no response. It verifies native output only after success, cell fallback otherwise, and terminal/process restoration in each case. Preview titles label the renderer. These checks emulate capability replies; they do not establish support in Termius or another named client.
+
+Seek-step tests cover fractional durations, forward/backward movement, pause preservation, timeline arrows, cycle wrap, range clamping, and search-input isolation. The PTY suite starts with `--seek-step=1s`, checks the displayed labels and actual video position, changes to 5 seconds with `,`, and seeks back with the timeline. A zero-duration CLI value is rejected. The fixed 30-second shortcuts are unchanged.

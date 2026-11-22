@@ -123,7 +123,8 @@ func (m *Model) previewRows(w, h int) []string {
 	return out
 }
 func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward 5s", "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.", "", "  ? / Esc close help     q / Ctrl+C quit"}
+	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
+		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
 	return rows
 }
 
@@ -134,7 +135,7 @@ func (m *Model) buttons() []transportButton {
 	if m.state == "Playing" {
 		play = "Ⅱ Pause"
 	}
-	return []transportButton{{"[  ◀◀ -5s", "["}, {play + "  Space", " "}, {"■ Stop  s", "s"}, {"+5s ▶▶  ]", "]"}}
+	return []transportButton{{"[  ◀◀ -" + m.seekLabel(), "["}, {play + "  Space", " "}, {"■ Stop  s", "s"}, {"+" + m.seekLabel() + " ▶▶  ]", "]"}}
 }
 func (m *Model) View() string {
 	m.syncGraphics()
@@ -174,6 +175,13 @@ func (m *Model) View() string {
 			title := "Preview"
 			if m.displayingActive {
 				title = "Now Playing"
+			}
+			if m.preview.HasVisual && !(m.displayingActive && m.active.Kind == media.Audio) {
+				if m.graphics != nil {
+					title += " · native"
+				} else {
+					title += " · cells"
+				}
 			}
 			if m.preview.Path != "" {
 				title += " · " + render.Safe(filepath.Base(m.preview.Path))
@@ -231,11 +239,11 @@ func (m *Model) View() string {
 	} else if m.notice != "" {
 		status = render.Safe(m.notice)
 	} else if m.timeline {
-		status = "TIMELINE · ← rewind 5s · → forward 5s · Shift+arrows 30s · Esc back"
+		status = "TIMELINE · ← / → seek " + m.seekLabel() + " · , change step · Shift+arrows 30s · Esc back"
 	}
 	add(" " + color(status, muted))
 	add(" " + color("↑↓ select   Enter open/play   Backspace parent   Esc back   / filter", fg))
-	add(" " + color("f focus   B browser only   Q queue   t timeline   { / } seek 30s   ? all controls", muted))
+	add(" " + color("f focus   B browser only   Q queue   t timeline   , seek step   { / } 30s   ? all controls", muted))
 	return strings.Join(lines, "\n")
 }
 

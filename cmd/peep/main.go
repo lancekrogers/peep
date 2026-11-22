@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/term"
@@ -14,10 +15,11 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.1.3-dev"
+const version = "0.1.4-dev"
 
 func run() error {
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
+	seekStep := flags.Duration("seek-step", 5*time.Second, "rewind/forward step (e.g. 500ms, 1s, 10s)")
 	play := flags.Bool("play", false, "start playback explicitly")
 	doctor := flags.Bool("doctor", false, "report media dependencies")
 	showVersion := flags.Bool("version", false, "show version")
@@ -33,16 +35,22 @@ func run() error {
 		}
 		return err
 	}
+	if *seekStep <= 0 {
+		return fmt.Errorf("--seek-step must be a positive duration")
+	}
 	if *showVersion {
 		fmt.Println("peep", version)
 		return nil
 	}
-	mode, err := render.Renderer(*renderer, os.Getenv)
+	mode, err := render.Renderer(*renderer)
 	if err != nil {
 		return err
 	}
 	if *doctor {
 		missing := false
+		if *renderer == "auto" && os.Getenv("TMUX") == "" && os.Getenv("STY") == "" {
+			mode = "auto (capability probe at startup)"
+		}
 		fmt.Println("peep", version, "· image/video renderer:", mode)
 		for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
 			path, err := exec.LookPath(name)
@@ -74,14 +82,23 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	model.SetSeekStep(*seekStep)
 	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx)}
-	if mode == "kitty" {
+	var app tea.Model = model
+	probe := *renderer == "auto" && os.Getenv("TMUX") == "" && os.Getenv("STY") == ""
+	if mode == "kitty" || probe {
 		writer := render.NewKittyWriter(os.Stdout)
 		defer writer.Close()
-		model.SetGraphics(writer)
+		if probe {
+			input := render.NewProbeInput(os.Stdin)
+			options = append(options, tea.WithInput(input))
+			app = &probingModel{model: model, input: input, output: writer, ctx: ctx}
+		} else {
+			model.SetGraphics(writer)
+		}
 		options = append(options, tea.WithOutput(writer))
 	}
-	_, err = tea.NewProgram(model, options...).Run()
+	_, err = tea.NewProgram(app, options...).Run()
 	return err
 }
 func main() {

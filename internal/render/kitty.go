@@ -11,21 +11,14 @@ import (
 	"time"
 )
 
-// Renderer selects native still-image graphics only on known direct terminals.
-// Multiplexers retain the cell fallback unless the user explicitly overrides it.
-func Renderer(request string, getenv func(string) string) (string, error) {
+// Renderer validates the override. Auto starts with cells until a terminal
+// capability probe succeeds; no environment variable implies graphics support.
+func Renderer(request string) (string, error) {
 	if request == "cells" || request == "kitty" {
 		return request, nil
 	}
 	if request != "auto" {
 		return "", fmt.Errorf("unknown renderer %q; use auto, kitty, or cells", request)
-	}
-	if getenv("TMUX") != "" || getenv("STY") != "" {
-		return "cells", nil
-	}
-	program := strings.ToLower(getenv("TERM_PROGRAM"))
-	if program == "ghostty" || getenv("KITTY_WINDOW_ID") != "" || getenv("TERM") == "xterm-kitty" {
-		return "kitty", nil
 	}
 	return "cells", nil
 }

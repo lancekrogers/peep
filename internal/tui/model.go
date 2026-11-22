@@ -47,6 +47,7 @@ type controlMsg struct {
 
 type Model struct {
 	stopPending                               bool
+	seekStep                                  time.Duration
 	spectrum                                  <-chan media.SpectrumFrame
 	spectrumCancel                            context.CancelFunc
 	spectrumID                                int

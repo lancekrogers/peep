@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -52,9 +53,9 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.timeline {
 		switch key {
 		case "left", "h":
-			return m.seek(m.position - 5)
+			return m.seek(m.position - m.seekSeconds())
 		case "right", "l":
-			return m.seek(m.position + 5)
+			return m.seek(m.position + m.seekSeconds())
 		case "shift+left":
 			return m.seek(m.position - 30)
 		case "shift+right":
@@ -186,15 +187,26 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.loadState(len(m.queue)-1, m.navigationState())
 		}
 	case "[":
-		return m.seek(m.position - 5)
+		return m.seek(m.position - m.seekSeconds())
 	case "]":
-		return m.seek(m.position + 5)
+		return m.seek(m.position + m.seekSeconds())
 	case "{":
 		return m.seek(m.position - 30)
 	case "}":
 		return m.seek(m.position + 30)
 	case "0":
 		return m.seek(0)
+	case ",":
+		steps := []time.Duration{time.Second, 5 * time.Second, 10 * time.Second, 30 * time.Second, time.Minute}
+		next := steps[0]
+		for _, step := range steps {
+			if step.Seconds() > m.seekSeconds() {
+				next = step
+				break
+			}
+		}
+		m.SetSeekStep(next)
+		m.notice = fmt.Sprintf("Seek step %s · , to change", m.seekLabel())
 	case "r":
 		m.repeat = (m.repeat + 1) % 3
 	case "z", "x", "c":
@@ -357,3 +369,17 @@ func (m *Model) navigationState() string {
 	}
 	return "Playing"
 }
+
+// SetSeekStep sets the small jump; zero-value models retain the default.
+func (m *Model) SetSeekStep(step time.Duration) {
+	if step > 0 {
+		m.seekStep = step
+	}
+}
+func (m *Model) seekSeconds() float64 {
+	if m.seekStep <= 0 {
+		return 5
+	}
+	return m.seekStep.Seconds()
+}
+func (m *Model) seekLabel() string { return fmt.Sprintf("%gs", m.seekSeconds()) }
