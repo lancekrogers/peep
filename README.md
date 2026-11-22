@@ -13,6 +13,14 @@
 Browse a folder, preview an image, play a recording, or open an illustrated
 Markdown document—without leaving the terminal.
 
+<p align="center">
+  <a href="https://github.com/lancekrogers/peep/releases/download/demo-v1/peep-launch-1080p.mp4">
+    <img src="docs/assets/peep-demo.jpg" width="960" alt="Watch the peep demo: video playback, file browsing, Markdown, Mermaid diagrams, and music in the terminal">
+  </a>
+  <br>
+  <a href="https://github.com/lancekrogers/peep/releases/download/demo-v1/peep-launch-1080p.mp4"><strong>▶ Watch the 74-second demo</strong></a> · 1080p · MP4
+</p>
+
 - **Browse** with Vim navigation, numbered jumps, sorting, fuzzy search, and globs.
 - **Watch** images, animated GIFs, and videos with native terminal graphics.
 - **Listen** to music and audiobooks with seeking, playback speed, and a live spectrum.
