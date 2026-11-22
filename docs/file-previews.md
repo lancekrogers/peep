@@ -67,11 +67,12 @@ Cell-only terminals retain styled Markdown text, with cell image previews and al
 
 ### Mermaid
 
-Use an optional `mmdc` adapter rather than implementing Mermaid layout in Go. The [official Mermaid CLI](https://github.com/mermaid-js/mermaid-cli) can produce PNG output and supports Markdown diagram fences. Its [package dependencies](https://github.com/mermaid-js/mermaid-cli/blob/master/package.json) include Node and Puppeteer, so diagram rendering introduces a browser runtime even though the peep application remains Go.
+Prefer a native renderer with no Node/browser dependency. Evaluate [mmdg (Go)](https://github.com/bvolpato/mermaid-go-renderer) first: its CLI provides PNG output without CGO, and can run as a cancellable helper without changing peep's Go module. [mmdr (Rust)](https://github.com/1jehuang/mermaid-rs-renderer) also offers SVG/PNG output without Node and remains an alternative. [pozeiden (Zig)](https://github.com/sc2in/pozeiden) offers SVG output, but would require a rasterization step for the current terminal compositor and documents syntax gaps. Select and pin a helper only after fixture rendering and output inspection; upstream coverage/performance claims are not peep verification results.
 
+No Node-based renderer is required. The adapter stays optional, with readable diagram source when unavailable.
 Extract each Mermaid fence or standalone `.mmd` document and render it to a bounded PNG, then use the same image-block compositor. Cache by source content, renderer version, width, and theme. Render visible diagrams first; cancel obsolete work and apply a deadline/output limit. Invoke the executable directly with fixed arguments and private temporary files. Diagram content supplies source only; do not accept executable commands or arbitrary renderer configuration from the document.
 
-With no renderer installed, a failed render, or a cell-only terminal where diagram labels would be illegible, show the Mermaid source with a concise explanation. Ordinary Markdown must remain readable. Pin and document the supported adapter version when implementing PR 3; no dependency installation is part of this proposal.
+With no renderer installed, a failed render, or a cell-only terminal where diagram labels would be illegible, show the Mermaid source with a concise explanation. Ordinary Markdown must remain readable. Pin and document the supported adapter version when implementing PR 3; the core executable must continue to work without the optional helper.
 
 ## Bounds and failure behavior
 
