@@ -92,7 +92,7 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 	return lines, slots
 }
 func (m *Model) requestDocumentImages() tea.Cmd {
-	if m.doc == nil || m.docSource || m.help || m.layout().preview == 0 {
+	if m.doc == nil || m.docSource || m.help || m.filePrompt != nil || m.editing || m.layout().preview == 0 {
 		return nil
 	}
 	if m.docImages == nil {

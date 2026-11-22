@@ -37,3 +37,7 @@ test-documents: build fixtures
 test-mermaid: build
     PEEP_MERMAID_BIN="$(command -v mmdg)" go test -race -count=1 -run Mermaid ./internal/document
     python3 scripts/mermaid-smoke.py
+
+# Isolated filesystem operations and external editor handoff in a PTY.
+test-file-operations: build
+    python3 scripts/file-operations-smoke.py

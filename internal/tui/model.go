@@ -50,6 +50,8 @@ type Model struct {
 	navCount                                  int
 	navG                                      bool
 	relativeNumbers                           bool
+	filePrompt                                *filePrompt
+	editing                                   bool
 	docImages                                 map[int]*documentImage
 	docImageCtx                               context.Context
 	docImageCancel                            context.CancelFunc
@@ -334,6 +336,10 @@ func (m *Model) control(fn func(context.Context, *player.Player) error, seek *fl
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
+	case fileOperationMsg:
+		return m, m.applyFileOperation(v)
+	case editorDoneMsg:
+		return m, m.editorFinished(v)
 	case documentImageMsg:
 		return m, m.applyDocumentImage(v)
 	case documentMsg:
@@ -589,7 +595,7 @@ func (m *Model) syncGraphics() {
 	if l.files > 0 {
 		x += l.files + 1
 	}
-	visible := !m.help && l.preview > 0 && m.width >= 35 && m.height >= 12
+	visible := !m.help && m.filePrompt == nil && !m.editing && l.preview > 0 && m.width >= 35 && m.height >= 12
 	if m.doc != nil {
 		if visible {
 			m.graphics.SetImages(m.documentGraphics(x, 3))

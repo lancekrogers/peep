@@ -13,7 +13,7 @@ import (
 
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
-	if key == "ctrl+c" || (!m.filtering && key == "q") {
+	if key == "ctrl+c" || (!m.filtering && m.filePrompt == nil && key == "q") {
 		m.clearSpectrum()
 		m.cancelDocumentImages()
 		if m.previewCancel != nil {
@@ -23,6 +23,9 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			m.loadCancel()
 		}
 		return tea.Quit
+	}
+	if m.filePrompt != nil {
+		return m.fileOperationKey(k)
 	}
 	if m.filtering {
 		switch key {
@@ -205,12 +208,23 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			m.browserOnly = false
 			return m.queueFromSelection()
 		}
+	case "e":
+		return m.beginFileOperation("editor")
+	case "M":
+		return m.beginFileOperation("move")
+	case "ctrl+r":
+		return m.beginFileOperation("rename")
+	case "delete":
+		return m.beginFileOperation("delete")
 	case "a":
 		if e := m.selected(); e != nil && !e.Dir && e.Kind != "" {
 			m.queue = append(m.queue, e.Path)
 			m.notice = "Added to queue"
 		}
 	case "d":
+		if !m.showQueue {
+			return m.beginFileOperation("delete")
+		}
 		if m.showQueue && !m.busy && len(m.queue) > 0 {
 			i := m.queueCursor
 			if i == m.index {
