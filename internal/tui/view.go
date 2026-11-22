@@ -136,7 +136,7 @@ func (m *Model) previewRows(w, h int) []string {
 	return out
 }
 func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
+	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  Files: e editor · Ctrl+R rename · M move · d/Delete confirm deletion", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
 		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
 	return rows
 }
@@ -153,6 +153,11 @@ func (m *Model) buttons() []transportButton {
 func (m *Model) View() string {
 	m.syncGraphics()
 	w, h := m.width, m.height
+	if m.filePrompt != nil {
+		rows := []string{fill(" "+color("peep · file operation", accent), w, bg)}
+		rows = append(rows, box(strings.ToUpper(m.filePrompt.operation), m.fileOperationRows(w-2, max(1, h-4)), w, max(3, h-1), true)...)
+		return strings.Join(rows, "\n")
+	}
 	if w < 35 || h < 12 {
 		hint := "q quit"
 		if m.transportVisible() {

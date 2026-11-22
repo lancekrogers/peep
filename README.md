@@ -28,7 +28,7 @@ just install
 
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 
-Without `--play`, startup is silent. Opening a directory lists files and folders. Text and Markdown files have scrollable previews; binary and special files show an unavailable-preview message. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Files are never modified or deleted.
+Without `--play`, startup is silent. Opening a directory lists files and folders. Text and Markdown files have scrollable previews; binary and special files show an unavailable-preview message. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Browsing and playback never modify files. Explicit file operations are available from the browser.
 
 ## Controls
 
@@ -45,6 +45,10 @@ Without `--play`, startup is silent. Opening a directory lists files and folders
 | `R` on Markdown | Toggle styled Markdown and source |
 | `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
+| `e` | Open selected file in `$VISUAL`, then `$EDITOR`, or `vi` |
+| `Ctrl+R` | Rename selected entry; Ctrl+U clears the current name |
+| `M` | Move to a folder or full destination path |
+| `d` / `Delete` in browser | Delete after typing the exact entry name to confirm |
 | `Space`, `p` | Play/pause |
 | `s` | Stop and reset to zero |
 | `[`, `]` | Seek backward/forward by the selected step (default 5 seconds); also clickable |
@@ -77,6 +81,14 @@ During music playback, the now-playing pane shows a 24-band spectrum calculated 
 Use `--seek-step=500ms`, `--seek-step=1s`, or another positive duration to choose a startup jump size. `,` changes it during the session, and transport labels update immediately. The fixed `{` / `}` and Shift+arrow jumps remain 30 seconds.
 
 Timelines always control the file named **NOW PLAYING**, even when the preview shows something else. Images use a slideshow clock, initially five seconds. GIFs play one duration before advancing. Rewind is backward seeking; continuous reverse playback is not implemented. Unknown-duration files have no percentage seek or end jump.
+
+## File operations
+
+Rename, move and delete operate on the selected browser entry; the parent entry is protected. Escape cancels a prompt. Rename accepts a filename; move accepts an existing folder or full path, relative to the current directory, absolute, or beginning with `~/`. Existing destinations (including dangling symlinks) are never overwritten. Moves are atomic within one filesystem; cross-filesystem moves are rejected.
+
+Deletion is permanent and requires typing the exact name. It removes files, symlinks themselves, and empty folders; non-empty folders are refused. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
+
+The editor command supports quoted paths and arguments, without shell expansion. The file path is passed as a separate absolute argument. For graphical editors, configure their wait flag (for example `EDITOR="code --wait"`). Peep releases the terminal while the editor runs and refreshes the listing and preview on return.
 
 ## Pixelated previews over SSH
 

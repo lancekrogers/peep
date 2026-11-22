@@ -7,6 +7,9 @@ import (
 )
 
 func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
+	if m.filePrompt != nil || m.editing {
+		return nil
+	}
 	if m.doc != nil && !m.help && (msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown) {
 		l := m.layout()
 		x := 1
