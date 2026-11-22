@@ -29,7 +29,7 @@ func Classify(path string) Kind {
 		return GIF
 	case ".mp4", ".mkv", ".mov", ".webm", ".avi", ".m4v":
 		return Video
-	case ".mp3", ".flac", ".wav", ".ogg", ".opus", ".m4a", ".aac":
+	case ".mp3", ".flac", ".wav", ".ogg", ".opus", ".m4a", ".m4b", ".aac":
 		return Audio
 	}
 	return ""

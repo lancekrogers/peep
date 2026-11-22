@@ -11,7 +11,7 @@ import (
 )
 
 func TestClassify(t *testing.T) {
-	for path, want := range map[string]Kind{"PIC.JPG": Image, "a.GIF": GIF, "movie.webm": Video, "song.flac": Audio, "notes.txt": ""} {
+	for path, want := range map[string]Kind{"PIC.JPG": Image, "a.GIF": GIF, "movie.webm": Video, "song.flac": Audio, "chapter.M4B": Audio, "notes.txt": ""} {
 		if got := Classify(path); got != want {
 			t.Errorf("%s: %s, want %s", path, got, want)
 		}

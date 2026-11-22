@@ -1,4 +1,4 @@
-# Bootstrap architecture
+# Architecture
 
 Go owns the browser, queue, keyboard controls, transport state, and terminal composition. Bubble Tea v1.3.10 is pinned to the version already used by other campaign tools. Media work runs outside the UI thread.
 
@@ -62,4 +62,4 @@ Source is limited to 128 KiB, intermediate SVG to 8 MiB, stdout to 20 MiB, stder
 
 `internal/installation` copies the running executable into a temporary version directory, verifies its SHA-256, and atomically changes the public symlink. Versions are content-addressed and retained for running processes. Cancellation or failed activation leaves the existing public executable intact. CLI installation can provision media dependencies through the host package manager; tests use `--no-deps` and isolated prefixes.
 
-`cmd/peep-package` builds a target executable with CGO disabled and creates a tar.gz plus checksum. README and upstream renderer notices accompany it; notices are also embedded for `--licenses`. Package tests extract and relocate archives, install into a temporary prefix, remove the extracted source, and render through the installed executable with no tools on PATH. Native-protocol PTY tests verify image payloads and process cleanup; they do not prove a terminal emulator's actual pixels.
+`cmd/peep-package` builds a target executable with CGO disabled and creates a tar.gz plus checksum. README, documentation, the curated demo collection, and upstream renderer notices accompany it; notices are also embedded for `--licenses`. Package tests extract and relocate archives, install into a temporary prefix, remove the extracted source, and render through the installed executable with no tools on PATH. Native-protocol PTY tests verify image payloads and process cleanup; they do not prove a terminal emulator's actual pixels.

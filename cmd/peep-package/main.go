@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,6 +59,31 @@ func run() error {
 	}{{binary, "bin/peep", 0755}, {"README.md", "README.md", 0644}, {"internal/diagram/notices/MMDG-LICENSE.txt", "licenses/MMDG-LICENSE.txt", 0644}, {"internal/diagram/notices/MMDG-NOTICES.txt", "licenses/MMDG-NOTICES.txt", 0644}}
 	for _, file := range files {
 		if err = add(tw, file.from, file.to, file.mode); err != nil {
+			tw.Close()
+			gz.Close()
+			f.Close()
+			return err
+		}
+	}
+	// Keep README links and the ready-to-browse demo usable after extraction.
+	for _, root := range []string{"docs", "examples"} {
+		err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() {
+				return nil
+			}
+			if entry.Type()&os.ModeSymlink != 0 {
+				target, err := os.Readlink(path)
+				if err != nil {
+					return err
+				}
+				return tw.WriteHeader(&tar.Header{Name: filepath.ToSlash(path), Linkname: target, Mode: 0777, Typeflag: tar.TypeSymlink})
+			}
+			return add(tw, path, filepath.ToSlash(path), 0644)
+		})
+		if err != nil {
 			tw.Close()
 			gz.Close()
 			f.Close()
