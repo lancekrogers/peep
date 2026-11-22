@@ -47,6 +47,10 @@ type controlMsg struct {
 }
 
 type Model struct {
+	docImages                                 map[int]*documentImage
+	docImageCtx                               context.Context
+	docImageCancel                            context.CancelFunc
+	docImageRevision                          int
 	doc                                       *document.Document
 	docLayout                                 document.Layout
 	docOffset                                 int
@@ -320,9 +324,12 @@ func (m *Model) control(fn func(context.Context, *player.Player) error, seek *fl
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
+	case documentImageMsg:
+		return m, m.applyDocumentImage(v)
 	case documentMsg:
 		if v.id == m.previewID {
 			m.applyDocument(v)
+			return m, m.requestDocumentImages()
 		}
 		return m, nil
 	case tea.WindowSizeMsg:
@@ -568,6 +575,14 @@ func (m *Model) syncGraphics() {
 		x += l.files + 1
 	}
 	visible := !m.help && l.preview > 0 && m.width >= 35 && m.height >= 12
+	if m.doc != nil {
+		if visible {
+			m.graphics.SetImages(m.documentGraphics(x, 3))
+		} else {
+			m.graphics.SetImages(nil)
+		}
+		return
+	}
 	m.graphics.Set(m.nativePNG, m.nativeRevision, render.Placement{X: x, Y: 3, Columns: l.preview - 2, Rows: l.body}, visible)
 }
 

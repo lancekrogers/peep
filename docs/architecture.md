@@ -45,3 +45,8 @@ The terminal compositor refreshes changed native frames even when text is unchan
 The browser now lists ordinary files independently of media recognition. Playable queues still filter through `media.Kind`; CLI `--play` rejects non-media arguments. `internal/document` opens regular files without blocking on FIFOs, reads at most 2 MiB with cancellation checks, validates UTF-8, and sanitizes terminal control characters. A second output sanitizer permits only SGR styling after Markdown entity decoding.
 
 Goldmark parses Markdown structurally and Glamour's ANSI renderer styles complete top-level blocks. The layout retains source-line anchors plus image/diagram references for later composition. Text remains terminal text. Formatting uses a pinned Glamour 0.10 dependency compatible with the existing Bubble Tea API; no major TUI migration is included. Layout is capped at 12,000 rows. Async generation IDs discard stale read/reflow results; resize/source toggle reuse the loaded source and preserve an approximate source anchor. Document focus owns scrolling, while transport continues to own the playing media. Track advancement preserves an open document.
+
+
+## Embedded document images
+
+Parsed image references resolve relative to the document. Only local regular files are decoded; network and data URLs are rejected. Two cancellable decodes may run at once. Visible images share a 48 MiB PNG budget and at most eight native placements. Offscreen pixels are released while dimensions remain to preserve scroll geometry. Each result carries the document generation. Native placements crop source pixels to the viewport; cells use the same reserved rows. Source mode, overlays, navigation and exit remove owned placements.

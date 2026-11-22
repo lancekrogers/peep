@@ -15,6 +15,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if key == "ctrl+c" || (!m.filtering && key == "q") {
 		m.clearSpectrum()
+		m.cancelDocumentImages()
 		if m.previewCancel != nil {
 			m.previewCancel()
 		}
@@ -47,6 +48,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.help {
 		if key == "?" || key == "esc" {
 			m.help = false
+			return m.requestDocumentImages()
 		}
 		return nil
 	}
@@ -75,25 +77,26 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			}
 		case "pgdown":
 			m.scrollDocument(m.layout().body - 1)
-			return nil
+			return m.requestDocumentImages()
 		case "pgup":
 			m.scrollDocument(1 - m.layout().body)
-			return nil
+			return m.requestDocumentImages()
 		}
 		if m.focus && !m.timeline {
 			switch key {
 			case "j", "down":
 				m.scrollDocument(1)
-				return nil
+				return m.requestDocumentImages()
 			case "k", "up":
 				m.scrollDocument(-1)
-				return nil
+				return m.requestDocumentImages()
 			case "home":
-				m.scrollDocument(-len(m.docLayout.Lines))
-				return nil
+				m.docOffset = 0
+				m.scrollDocument(0)
+				return m.requestDocumentImages()
 			case "end":
-				m.scrollDocument(len(m.docLayout.Lines))
-				return nil
+				m.scrollDocument(1 << 30)
+				return m.requestDocumentImages()
 			}
 		}
 	}

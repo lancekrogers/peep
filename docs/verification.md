@@ -51,3 +51,9 @@ Seek-step tests cover fractional durations, forward/backward movement, pause pre
 ## Document preview foundation
 
 `just check`, `just test-integration`, `just test-tui`, `just test-documents`, and `just build-all` passed for the document slice. New cases cover Markdown tables/reference images, source layout, binary/invalid UTF-8 detection, a nonblocking FIFO path, bounded UTF-8 truncation, cancelled reads, terminal escape injection through both raw bytes and Markdown entities, document focus/scroll/source/resize, stale generations, and media queue isolation. The PTY suite also pauses/seeks audio while a README stays visible. A document-view transcript was rendered offline and inspected for layout and styling. This does not verify a graphical terminal's native pixels.
+
+## Embedded images and GIF replay coverage
+
+The embedded-image slice passed `just check`, backend integration tests, and the baseline, document, and GIF replay PTY scripts. Unit tests cover local URL resolution, PNG bounds/transparency, multiple native placements, crop updates without retransmission, overlay/exit cleanup, stale results, visible failures and stable geometry after offscreen pixel eviction. The document harness checks two simultaneous local images, reference-style Markdown, source toggling, scrolling/resizing, and missing/remote image fallbacks.
+
+`just test-gif-replay` exercises replay via Space and Enter after EOF and opening a GIF in another folder, in cells and native modes. Native assertions decode transmitted PNG payloads and require changing frames after each replay/switch. The user's two reported GIFs also completed and replayed in a separate PTY investigation. These checks did **not** reproduce the reported stuck/blank state, and do not establish correct pixels in the user's terminal emulator. The reported GIF bug remains unresolved pending the distinction between a frozen transport and a blank rendering surface.
