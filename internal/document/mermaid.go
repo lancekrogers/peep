@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
 
-// Mermaid runs an optional, independently installed mmdg helper. Its bounded
+// Mermaid runs a private rendering worker in the peep executable. Its bounded
 // cache belongs to the application instance, not to a document or the filesystem.
 type Mermaid struct {
 	executable string
@@ -22,7 +23,22 @@ type Mermaid struct {
 	bytes      int
 }
 
+// Resolve once, before an install/update can switch the public executable link.
+var selfExecutable = func() string {
+	path, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		return real
+	}
+	return path
+}()
+
 func NewMermaid(executable string) *Mermaid {
+	if executable == "" {
+		executable = selfExecutable
+	}
 	return &Mermaid{executable: executable, cache: map[[32]byte][]byte{}}
 }
 
@@ -47,7 +63,7 @@ func (r *Mermaid) Render(ctx context.Context, source string, columns int) (Image
 	}
 	executable, err := exec.LookPath(r.executable)
 	if err != nil {
-		return Image{}, fmt.Errorf("install optional mmdg to render Mermaid; showing source")
+		return Image{}, fmt.Errorf("peep rendering worker unavailable: %w; reinstall peep", err)
 	}
 	info, err := os.Stat(executable)
 	if err != nil {
@@ -62,7 +78,7 @@ func (r *Mermaid) Render(ctx context.Context, source string, columns int) (Image
 	}
 	child, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(child, executable, "-i", "-", "-o", "-", "-e", "png", "-q", "-t", "dark", "-b", "#171e2d", "--size", "1600", "--fonts", "embedded", "--timeout", "5s")
+	cmd := exec.CommandContext(child, executable, "__peep_mermaid_png_v1")
 	cmd.Stdin = strings.NewReader(source)
 	out := &limitedOutput{limit: 20 << 20}
 	stderr := &limitedOutput{limit: 4096}

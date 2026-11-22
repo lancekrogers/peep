@@ -3,15 +3,19 @@ build:
     mkdir -p bin
     go build -trimpath -o bin/peep ./cmd/peep
 
-# Install to Go's configured bin directory.
-install:
-    go install ./cmd/peep
+# Install peep and any missing media dependencies (default ~/.local).
+install: build
+    ./bin/peep --install
 
 # Compile the supported OS/architecture combinations.
 build-all:
     mkdir -p dist
     for os in darwin linux; do for arch in arm64 amd64; do GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -trimpath -o dist/peep-$os-$arch ./cmd/peep; done; done
 
-# Optional Mermaid helper; separate from peep's Go 1.24 build (requires Go 1.27+).
-install-mermaid:
-    CGO_ENABLED=0 go install github.com/bvolpato/mermaid-go-renderer/cmd/mmdg@v0.13.0
+# Build a self-contained archive for the current host.
+package version="0.2.0-dev":
+    go run ./cmd/peep-package --version '{{version}}'
+
+# Build archives for all supported targets.
+package-all version="0.2.0-dev":
+    for os in darwin linux; do for arch in arm64 amd64; do go run ./cmd/peep-package --os "$os" --arch "$arch" --version '{{version}}'; done; done

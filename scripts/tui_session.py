@@ -30,7 +30,7 @@ class Session:
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
         child = "import subprocess,sys,termios; before=termios.tcgetattr(0); p=subprocess.run(sys.argv[1:]); after=termios.tcgetattr(0); mask=~getattr(termios,'PENDIN',0); before[3]&=mask; after[3]&=mask; restored=after==before; print('PEEP_TERMINAL_RESTORED='+str(restored),flush=True); sys.exit(p.returncode if restored else 99)"
-        self.proc = subprocess.Popen([sys.executable, '-c', child, str(ROOT/'bin/peep'), '--audio-output=null', '--renderer=cells', *args],
+        self.proc = subprocess.Popen([sys.executable, '-c', child, env.get('PEEP_TEST_BINARY',str(ROOT/'bin/peep')), '--audio-output=null', '--renderer=cells', *args],
             cwd=ROOT, stdin=self.slave, stdout=self.slave, stderr=self.slave,
             env=env, preexec_fn=terminal)
         self.log = bytearray()

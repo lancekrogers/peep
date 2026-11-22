@@ -33,11 +33,15 @@ test-gif-replay: build fixtures
 test-documents: build fixtures
     python3 scripts/document-smoke.py
 
-# Actual optional renderer plus native-protocol TUI checks (mmdg must be on PATH).
+# Compiled-in renderer plus native-protocol TUI checks (no mmdg installation).
 test-mermaid: build
-    PEEP_MERMAID_BIN="$(command -v mmdg)" go test -race -count=1 -run Mermaid ./internal/document
+    PEEP_TEST_BINARY="$PWD/bin/peep" go test -race -count=1 -run Mermaid ./internal/document
     python3 scripts/mermaid-smoke.py
 
 # Isolated filesystem operations and external editor handoff in a PTY.
 test-file-operations: build
     python3 scripts/file-operations-smoke.py
+
+# Extract, relocate, install, and exercise a single-binary package with no tools on PATH.
+test-package: package
+    python3 scripts/package-smoke.py

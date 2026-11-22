@@ -4,8 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/lancekrogers/peep/internal/diagram"
+	"github.com/lancekrogers/peep/internal/installation"
 	"os"
 	"os/exec"
+	"os/signal"
+	"path/filepath"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,13 +19,20 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.2.0-dev"
+var version = "0.2.0-dev"
 
 func run() error {
+	if len(os.Args) == 2 && os.Args[1] == diagram.WorkerArgument {
+		return diagram.Worker(context.Background(), os.Stdin, os.Stdout)
+	}
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
 	seekStep := flags.Duration("seek-step", 5*time.Second, "rewind/forward step (e.g. 500ms, 1s, 10s)")
 	play := flags.Bool("play", false, "start playback explicitly")
 	doctor := flags.Bool("doctor", false, "report media dependencies")
+	install := flags.Bool("install", false, "install this executable and missing media dependencies")
+	prefix := flags.String("prefix", "", "installation prefix (default ~/.local)")
+	noDeps := flags.Bool("no-deps", false, "skip media dependency setup during --install")
+	licenses := flags.Bool("licenses", false, "show embedded Mermaid license and third-party notices")
 	showVersion := flags.Bool("version", false, "show version")
 	renderer := flags.String("renderer", "auto", "image/video renderer: auto, kitty, or cells")
 	audio := flags.String("audio-output", "", "mpv audio output override (null for automated tests)")
@@ -37,6 +48,37 @@ func run() error {
 	}
 	if *seekStep <= 0 {
 		return fmt.Errorf("--seek-step must be a positive duration")
+	}
+	if *install {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer stop()
+		destination := *prefix
+		if destination == "" {
+			home, err := os.UserHomeDir()
+			if err != nil {
+				return err
+			}
+			destination = filepath.Join(home, ".local")
+		}
+		executable, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		if !*noDeps {
+			if err = installation.EnsureMedia(ctx, os.Stdin, os.Stdout, os.Stderr); err != nil {
+				return err
+			}
+		}
+		path, err := installation.Install(ctx, executable, destination)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Installed %s\nAdd %s to PATH if needed.\n", path, filepath.Dir(path))
+		return nil
+	}
+	if *licenses {
+		fmt.Print(diagram.License, "\n", diagram.Notices)
+		return nil
 	}
 	if *showVersion {
 		fmt.Println("peep", version)
@@ -61,11 +103,7 @@ func run() error {
 				fmt.Printf("%s: %s\n", name, path)
 			}
 		}
-		if path, err := exec.LookPath("mmdg"); err == nil {
-			fmt.Println("mmdg (optional Mermaid):", path)
-		} else {
-			fmt.Println("mmdg (optional Mermaid): not installed; source preview available")
-		}
+		fmt.Printf("Mermaid: built in (mmdg %s; embedded fonts)\n", diagram.Version)
 		if missing {
 			return fmt.Errorf("install missing media tools; see README.md")
 		}

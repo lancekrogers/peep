@@ -49,7 +49,7 @@ func TestMermaidHelperAndCache(t *testing.T) {
 func TestMermaidFailures(t *testing.T) {
 	dir := t.TempDir()
 	r := NewMermaid(filepath.Join(dir, "missing"))
-	if _, err := r.Render(context.Background(), "flowchart LR", 40); err == nil || !strings.Contains(err.Error(), "optional mmdg") {
+	if _, err := r.Render(context.Background(), "flowchart LR", 40); err == nil || !strings.Contains(err.Error(), "rendering worker unavailable") {
 		t.Fatal(err)
 	}
 	if _, err := r.Render(context.Background(), strings.Repeat("a", 128<<10+1), 40); err == nil || !strings.Contains(err.Error(), "128 KiB") {
@@ -74,9 +74,9 @@ func TestMermaidFailures(t *testing.T) {
 }
 
 func TestMermaidRealHelper(t *testing.T) {
-	helper := os.Getenv("PEEP_MERMAID_BIN")
+	helper := os.Getenv("PEEP_TEST_BINARY")
 	if helper == "" {
-		t.Skip("set PEEP_MERMAID_BIN for actual renderer integration")
+		t.Skip("set PEEP_TEST_BINARY for actual renderer integration")
 	}
 	r := NewMermaid(helper)
 	for _, source := range []string{"flowchart LR\n A[Browse] --> B{Media?}\n B --> C[Preview]", "sequenceDiagram\n Alice->>Bob: Hello\n Bob-->>Alice: Hi"} {
