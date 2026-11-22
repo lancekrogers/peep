@@ -117,4 +117,4 @@ peep --doctor        # reports whether the optional helper is on PATH
 
 Peep itself still builds with Go 1.24+ and CGO disabled. The helper needs neither Node nor a browser; it does include an embedded Goja JavaScript engine. It is an independent installation, not a dependency of peep's Go module. Flowcharts and sequence diagrams are verified; other Mermaid types depend on the helper's support. Mermaid renders use a dark background, embedded fonts, bounded input/output and a cancellable deadline. No links are opened and no remote image assets are fetched.
 
-Development uses feature branches and reviewable PRs. The [file preview proposal](docs/file-previews.md) records the scope and decisions.
+Development uses feature branches and reviewable PRs. Planning lives in the My_Tools campaign work item WI-aa8358 (`workflow/design/peep`).
