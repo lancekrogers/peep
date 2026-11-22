@@ -13,7 +13,7 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.1.0-dev"
+const version = "0.1.1-dev"
 
 func run() error {
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
@@ -72,7 +72,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	_, err = tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx)).Run()
+	_, err = tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx)).Run()
 	return err
 }
 func main() {

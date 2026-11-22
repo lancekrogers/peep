@@ -19,7 +19,7 @@ func TestFixtures(t *testing.T) {
 	if os.Getenv("PEEP_INTEGRATION") == "" {
 		t.Skip("set PEEP_INTEGRATION=1 and run just fixtures")
 	}
-	for _, name := range []string{"01-image.png", "02-animation.gif", "03-video.mp4", "04-audio.wav"} {
+	for _, name := range []string{"01-image.png", "02-animation.gif", "03-video.mp4", "04-audio.wav", "06-photo.jpg"} {
 		t.Run(name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
@@ -83,6 +83,20 @@ func TestDecodeCancellation(t *testing.T) {
 			}
 		case <-timeout:
 			t.Fatal("decoder did not terminate")
+		}
+	}
+}
+
+func TestStillDoesNotSeek(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("integration")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	for _, pos := range []float64{0, 3} {
+		f := <-Frames(ctx, "../../tmp/fixtures/06-photo.jpg", 61, 38, pos, true)
+		if f.Err != nil || len(f.RGB) != 61*38*3 {
+			t.Fatalf("JPEG at slideshow time %v: %v (%d bytes)", pos, f.Err, len(f.RGB))
 		}
 	}
 }

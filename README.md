@@ -32,13 +32,15 @@ Without `--play`, startup is silent. Opening a directory lists its media and fol
 | Key | Action |
 |---|---|
 | `j/k`, up/down | Select file; select queue entry when queue is open |
-| `h/l`, left/right | Parent / enter directory |
+| `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
 | `Enter` | Enter directory or start selected media |
-| `/`, `Esc` | Filter filenames / clear filter or close overlay |
+| `/`, `Esc` | Filter filenames / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
 | `Space`, `p` | Play/pause |
 | `s` | Stop and reset to zero |
-| `[`, `]` | Seek backward/forward 5 seconds |
+| `[`, `]` | Seek backward/forward 5 seconds; also shown as clickable transport buttons |
+| `t`, `Tab`, then left/right | Focus timeline and seek backward/forward 5 seconds |
+| Click timeline | Seek to the clicked position |
 | `{`, `}` | Seek backward/forward 30 seconds |
 | `0` | Seek to start |
 | `n`, `b` | Next/previous queue entry |
@@ -50,6 +52,8 @@ Without `--play`, startup is silent. Opening a directory lists its media and fol
 | `d` in queue | Remove an inactive queue entry; never its file |
 | `f`, `v` | Focus preview / show now playing |
 | `?`, `q`, `Ctrl+C` | Help / quit / quit |
+
+The interface uses a full-color theme, highlighted selection, bordered file/preview/queue panes, and a visible `../ Parent directory` entry. In narrow terminals the browser occupies the main pane; `f` switches to the preview. Click a file to select it, then press Enter to open or play.
 
 Timelines always control the file named **NOW PLAYING**, even when the preview shows something else. Images use a slideshow clock, initially five seconds. GIFs play one duration before advancing. Rewind is backward seeking; continuous reverse playback is not implemented. Unknown-duration files have no percentage seek or end jump.
 
@@ -73,7 +77,7 @@ Integration fixtures and terminal transcripts are generated under ignored `tmp/`
 - The cell renderer uses a 120-column by 100-pixel decode cap. 12 fps is the target, not a universal performance guarantee. Slow terminals may render fewer frames. Native-resolution Kitty/iTerm2 graphics remain future work.
 - The queue stops with an error on a bad item; use next or select another file. Automatic skip-on-error is deferred. Stopping during load cancels it; Play retries the retained entry.
 - Preferences, queue state, and position are session-local. No automatic resume or persistent configuration yet.
-- Shuffle, image zoom/pan, custom bindings, timestamp entry, mouse scrubbing, queue reordering, subtitles, and network streams are deferred from the broader design.
+- Shuffle, image zoom/pan, custom bindings, timestamp entry, drag scrubbing, queue reordering, subtitles, and network streams are deferred from the broader design.
 - Support is based on the installed FFmpeg/mpv build. Filename recognition is not a codec guarantee. Tested fixture details live in [verification](docs/verification.md).
 
 See [architecture](docs/architecture.md) for the rendering and playback boundary. The owning campaign design is `workflow/design/peep` (WI-aa8358).

@@ -42,6 +42,8 @@ type controlMsg struct {
 
 type Model struct {
 	startState                                string
+	previewError                              string
+	timeline                                  bool
 	ctx                                       context.Context
 	backend                                   *player.Player
 	dir                                       string
@@ -132,6 +134,7 @@ func (m *Model) previewSelection() tea.Cmd {
 	m.pending = nil
 	m.rows = nil
 	m.displayingActive = false
+	m.previewError = ""
 	entry := m.selected()
 	if entry == nil || entry.Dir {
 		m.preview = media.Info{}
@@ -144,14 +147,12 @@ func (m *Model) previewSelection() tea.Cmd {
 	return func() tea.Msg { info, err := media.Probe(ctx, path); return previewMsg{id, info, err} }
 }
 func (m *Model) dimensions() (int, int) {
-	w := m.width - 4
-	if !m.focus && m.width >= 90 {
-		w -= 30
+	l := m.layout()
+	w := l.preview
+	if w == 0 {
+		w = m.width - 2
 	}
-	if m.showQueue && m.width >= 110 {
-		w -= 28
-	}
-	return max(4, min(w, 120)), max(2, min((m.height-9)*2, 100))
+	return max(4, min(w-2, 120)), max(2, min(l.body*2, 100))
 }
 func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd {
 	if m.previewCancel != nil {
@@ -163,6 +164,7 @@ func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd
 	m.rows = nil
 	m.displayingActive = active
 	m.preview = info
+	m.previewError = ""
 	if !info.HasVisual {
 		return nil
 	}
@@ -277,7 +279,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.entries = v.entries
+		if m.filter == "" && filepath.Dir(m.dir) != m.dir {
+			m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
+		}
 		m.cursor = 0
+		if len(m.entries) > 1 && m.entries[0].Name == ".." {
+			m.cursor = 1
+		}
 		want := m.wanted
 		if want == "" {
 			want = m.history[m.dir]
@@ -311,6 +319,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if v.err != nil {
 			m.notice = v.err.Error()
+			m.previewError = v.err.Error()
 			return m, nil
 		}
 		m.notice = ""
@@ -325,6 +334,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if v.frame.Err != nil {
 			m.notice = v.frame.Err.Error()
+			m.previewError = v.frame.Err.Error()
 			m.frames = nil
 			return m, nil
 		}
@@ -406,6 +416,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Batch(tick(), m.nextFrame())
 		}
 		return m, tick()
+	case tea.MouseMsg:
+		return m, m.mouse(v)
 	case tea.KeyMsg:
 		if v.Type == tea.KeyRunes && len(v.Runes) > 1 && !v.Paste {
 			cmds := []tea.Cmd{}

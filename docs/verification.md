@@ -23,3 +23,9 @@ The PTY harness sets `TERM=xterm-256color` and `COLORTERM=truecolor`, starts at 
 The harness is a real pseudo-terminal, not a named graphical terminal emulator. It verifies terminal I/O and state transitions, not how every emulator displays the cells. mpv tests use its null audio output; speaker output and perceptual audio/video synchronization were not audited. The renderer targets 12 fps, but no sustained frame-rate or CPU benchmark is claimed. Kitty graphics, tmux, SSH audio forwarding, Windows, subtitles, and a codec matrix beyond the listed fixtures remain unverified or unimplemented.
 
 The bootstrap proof established that separate frame decoding can coexist with live TUI controls, seeking, resizing, and clean shutdown. Native-resolution graphics and a more efficient shared decoder are follow-up implementation work, not claims of this version.
+
+## Usability and JPEG follow-up
+
+A user screenshot exposed a real JPEG failure that PNG-only still fixtures missed: FFmpeg input seeking at `-ss 0` returned no frames for a JPEG. Still images now decode without seeking, even when their slideshow clock is nonzero. Single-frame decode has a ten-second timeout, and a failure replaces loading text with an explicit preview error.
+
+Added JPEG regression cases at zero and nonzero slideshow times, odd preview widths, visible parent navigation, selection restoration, full-color layout bounds, error-state rendering, timeline keyboard/mouse seeking, and a live PTY JPEG preview. The full-color view was also rendered from an actual PTY transcript and visually inspected, revealing and correcting a truncated parent label and low-contrast pane titles. Artifacts remain in ignored `tmp/acceptance/`.

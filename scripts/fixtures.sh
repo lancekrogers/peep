@@ -7,3 +7,5 @@ ffmpeg -v error -y -f lavfi -i 'testsrc2=size=160x96:rate=8:duration=3' tmp/fixt
 ffmpeg -v error -y -f lavfi -i 'sine=frequency=330:duration=8' -metadata title='Peep test tone' -metadata artist='Synthetic fixture' tmp/fixtures/04-audio.wav
 printf 'not an image\n' > tmp/fixtures/05-broken.png
 mkdir -p tmp/fixtures/folder
+
+ffmpeg -v error -y -i tmp/fixtures/01-image.png -frames:v 1 tmp/fixtures/06-photo.jpg

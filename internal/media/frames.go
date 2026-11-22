@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"time"
 )
 
 const FPS = 12.0
@@ -23,6 +24,15 @@ func Frames(ctx context.Context, path string, width, height int, start float64, 
 	out := make(chan Frame, 2)
 	go func() {
 		defer close(out)
+		decodeCtx := ctx
+		if single {
+			var cancel context.CancelFunc
+			decodeCtx, cancel = context.WithTimeout(ctx, 10*time.Second)
+			defer cancel()
+		}
+		if single && (Classify(path) == Image || Classify(path) == Audio) {
+			start = 0
+		}
 		send := func(f Frame) bool {
 			select {
 			case out <- f:
@@ -35,16 +45,21 @@ func Frames(ctx context.Context, path string, width, height int, start float64, 
 			send(Frame{Err: fmt.Errorf("invalid frame size %dx%d", width, height)})
 			return
 		}
-		filter := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,setsar=1", width, height, width, height)
+		filter := fmt.Sprintf("format=rgb24,scale=%d:%d:force_original_aspect_ratio=decrease,pad=%d:%d:(ow-iw)/2:(oh-ih)/2,setsar=1", width, height, width, height)
 		if !single {
 			filter = "fps=12," + filter
 		}
-		args := []string{"-v", "error", "-nostdin", "-threads", "1", "-ss", fmt.Sprintf("%.3f", start), "-i", path, "-an", "-sn", "-vf", filter, "-threads", "1"}
+		args := []string{"-v", "error", "-nostdin", "-threads", "1"}
+		// Seeking even to zero can discard the only JPEG packet. Stills never seek.
+		if start > 0 {
+			args = append(args, "-ss", fmt.Sprintf("%.3f", start))
+		}
+		args = append(args, "-i", path, "-an", "-sn", "-vf", filter, "-threads", "1")
 		if single {
 			args = append(args, "-frames:v", "1")
 		}
 		args = append(args, "-f", "rawvideo", "-pix_fmt", "rgb24", "pipe:1")
-		cmd := exec.CommandContext(ctx, "ffmpeg", args...)
+		cmd := exec.CommandContext(decodeCtx, "ffmpeg", args...)
 		var stderr bytes.Buffer
 		cmd.Stderr = &stderr
 		pipe, err := cmd.StdoutPipe()
@@ -70,6 +85,10 @@ func Frames(ctx context.Context, path string, width, height int, start float64, 
 		}
 		err = cmd.Wait()
 		if ctx.Err() != nil {
+			return
+		}
+		if decodeCtx.Err() != nil {
+			send(Frame{Err: fmt.Errorf("preview timed out: %w", decodeCtx.Err())})
 			return
 		}
 		if err != nil {

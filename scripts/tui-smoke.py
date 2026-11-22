@@ -53,7 +53,7 @@ class Session:
         out=bytearray();until=time.monotonic()+timeout
         while time.monotonic()<until:
             out.extend(self.read(.1))
-            if needle in out: return bytes(out)
+            if needle in re.sub(rb'\x1b\[[0-?]*[ -/]*[@-~]',b'',out): return bytes(out)
             if self.proc.poll() is not None: break
         raise AssertionError(f'{self.name}: missing {needle!r}; tail={bytes(out[-1800:])!r}')
     def send(self, keys):
@@ -104,10 +104,14 @@ try:
     s.send(b' ');s.expect(b'[Paused]')
     s.send(b']');s.expect(b'00:06 / 00:08')
     s.send(b'[');s.expect(b'00:01 / 00:08')
+    s.send(b't');s.expect(b'TIMELINE');s.send(b'\x1b[C');s.expect(b'00:06 / 00:08');s.send(b'\x1b[D');s.expect(b'00:01 / 00:08');s.send(b't')
+    s.send(b'\x1b[<0;56;26M');s.expect(b'00:04 / 00:08');s.send(b'\x1b[<0;56;26m')
     s.send(b'?');s.expect(b'BROWSE');s.send(b'?')
     s.resize(70,20);s.read(.5);s.resize(110,30);s.read(.5)
     s.send(b's');s.expect(b'[Stopped] 00:00')
     s.send(b' ');s.expect(b'[Playing]');s.finish()
+    s=Session('jpeg','tmp/fixtures/06-photo.jpg');sessions.append(s)
+    s.expect(b'\xe2\x96\x80');s.send(b'f');s.read(.2);s.send(b'\x1b');s.expect(b'Files');s.finish()
     s=Session('image','--play','tmp/fixtures/01-image.png');sessions.append(s)
     s.expect(b'[Playing]');s.send(b' ');s.expect(b'[Paused]')
     assert b'\x1b[38;2;' in s.log, 'image pixels missing'
@@ -121,7 +125,10 @@ try:
     s=Session('broken','--play','tmp/fixtures/05-broken.png');sessions.append(s)
     s.expect(b'[Error]');s.finish()
     s=Session('browse','tmp/fixtures');sessions.append(s)
-    s.expect(b'01-image.png');s.send(b'/video');s.expect(b'Filter: video');s.send(b'\r');s.send(b'\r');s.expect(b'[Playing]');s.finish()
+    s.expect(b'Parent directory');s.send(b'/video');s.expect(b'Filter: video');s.send(b'\r');s.send(b'\r');s.expect(b'[Playing]');s.finish()
+    s=Session('navigation','tmp/fixtures/folder');sessions.append(s)
+    s.expect(b'Parent directory');s.send(b'\r');s.expect(b'01-image.png')
+    s.send(b'\r');s.expect(b'Files \xc2\xb7 1');s.send(b'\x7f');s.expect(b'01-image.png');s.finish()
     s=Session('mixed','--play','tmp/fixtures/01-image.png','tmp/fixtures/02-animation.gif','tmp/fixtures/03-video.mp4','tmp/fixtures/04-audio.wav');sessions.append(s)
     s.expect(b'[Playing]');s.expect(b'NOW PLAYING  02-animation.gif',timeout=8)
     s.expect(b'NOW PLAYING  03-video.mp4',timeout=6)

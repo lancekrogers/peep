@@ -48,28 +48,57 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return nil
 	}
+	if m.timeline {
+		switch key {
+		case "left", "h":
+			return m.seek(m.position - 5)
+		case "right", "l":
+			return m.seek(m.position + 5)
+		case "shift+left":
+			return m.seek(m.position - 30)
+		case "shift+right":
+			return m.seek(m.position + 30)
+		case "home":
+			return m.seek(0)
+		case "end":
+			return m.seek(m.duration)
+		}
+	}
 	switch key {
+	case "tab", "shift+tab", "t":
+		m.timeline = !m.timeline
+		return nil
 	case "?":
 		m.help = true
 	case "esc":
+		if m.timeline {
+			m.timeline = false
+			return nil
+		}
 		if m.showQueue {
 			m.showQueue = false
 		} else if m.focus {
 			m.focus = false
+			return m.previewSelection()
 		} else if m.filter != "" {
 			m.filter = ""
 			return m.readDir()
+		} else {
+			return m.navigate(filepath.Dir(m.dir))
 		}
 		return m.resizeFrame()
 	case "f":
+		m.timeline = false
 		m.focus = !m.focus
 		return m.resizeFrame()
 	case "Q":
+		m.timeline = false
 		m.showQueue = !m.showQueue
 		return m.resizeFrame()
 	case "v":
 		return m.showActive()
 	case "/":
+		m.timeline = false
 		m.filtering = true
 	case "H":
 		m.hidden = !m.hidden
@@ -209,8 +238,14 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	return nil
 }
 func (m *Model) navigate(dir string) tea.Cmd {
+	m.focus = false
+	m.showQueue = false
+	m.timeline = false
 	if e := m.selected(); e != nil {
 		m.history[m.dir] = e.Path
+	}
+	if filepath.Dir(m.dir) == dir {
+		m.history[dir] = m.dir
 	}
 	m.dir = dir
 	m.cursor = 0
