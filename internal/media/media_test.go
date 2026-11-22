@@ -1,0 +1,88 @@
+package media
+
+import (
+	"context"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestClassify(t *testing.T) {
+	for path, want := range map[string]Kind{"PIC.JPG": Image, "a.GIF": GIF, "movie.webm": Video, "song.flac": Audio, "notes.txt": ""} {
+		if got := Classify(path); got != want {
+			t.Errorf("%s: %s, want %s", path, got, want)
+		}
+	}
+}
+func TestFixtures(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("set PEEP_INTEGRATION=1 and run just fixtures")
+	}
+	for _, name := range []string{"01-image.png", "02-animation.gif", "03-video.mp4", "04-audio.wav"} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			path := filepath.Join("..", "..", "tmp", "fixtures", name)
+			info, err := Probe(ctx, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if info.Duration <= 0 {
+				t.Fatalf("missing duration: %+v", info)
+			}
+			if info.HasVisual {
+				frames := Frames(ctx, path, 60, 36, 0, info.Kind == Image)
+				count := 0
+				for f := range frames {
+					if f.Err != nil {
+						t.Fatal(f.Err)
+					}
+					if len(f.RGB) != 60*36*3 {
+						t.Fatal("wrong frame size")
+					}
+					count++
+					if count == 3 {
+						cancel()
+						break
+					}
+				}
+				if count == 0 {
+					t.Fatal("no frames")
+				}
+			}
+		})
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := Probe(ctx, "../../tmp/fixtures/05-broken.png"); err == nil {
+		t.Fatal("corrupt image accepted")
+	}
+}
+func TestDecodeCancellation(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("integration")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	ch := Frames(ctx, "../../tmp/fixtures/03-video.mp4", 80, 48, 0, false)
+	select {
+	case f := <-ch:
+		if f.Err != nil {
+			t.Fatal(f.Err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("first frame timed out")
+	}
+	cancel()
+	timeout := time.After(3 * time.Second)
+	for {
+		select {
+		case _, ok := <-ch:
+			if !ok {
+				return
+			}
+		case <-timeout:
+			t.Fatal("decoder did not terminate")
+		}
+	}
+}
