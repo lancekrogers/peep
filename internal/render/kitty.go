@@ -29,6 +29,8 @@ type Placement struct{ X, Y, Columns, Rows int }
 // image commands, places images after text, and removes owned images on exit.
 // Fd preserves Bubble Tea's TTY-size detection when using this output wrapper.
 type KittyWriter struct {
+	images                    []ImagePlacement
+	imageStates               map[int]placedImage
 	timer                     *time.Timer
 	drawn                     Placement
 	out                       io.Writer
@@ -42,16 +44,20 @@ type KittyWriter struct {
 }
 
 func NewKittyWriter(out *os.File) *KittyWriter {
-	return &KittyWriter{out: out, fd: out.Fd(), imageID: os.Getpid()}
+	return &KittyWriter{out: out, fd: out.Fd(), imageID: os.Getpid() * 64}
 }
 func (w *KittyWriter) Fd() uintptr { return w.fd }
 func (w *KittyWriter) Set(png []byte, key int, rect Placement, visible bool) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	w.images = nil
 	w.png = png
 	w.key = key
 	w.rect = rect
 	w.visible = visible && len(png) > 0 && rect.Columns > 0 && rect.Rows > 0
+	w.schedule()
+}
+func (w *KittyWriter) schedule() {
 	if !w.closed && w.timer == nil && w.needsDraw() {
 		w.timer = time.AfterFunc(25*time.Millisecond, func() {
 			w.mu.Lock()
@@ -65,7 +71,7 @@ func (w *KittyWriter) Set(png []byte, key int, rect Placement, visible bool) {
 }
 func (w *KittyWriter) remove() string { return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", w.imageID) }
 func (w *KittyWriter) needsDraw() bool {
-	return (w.uploaded && (!w.visible || w.sent != w.key || w.drawn != w.rect)) || (w.visible && (!w.uploaded || w.sent != w.key || w.drawn != w.rect))
+	return w.imagesChanged() || (w.uploaded && (!w.visible || w.sent != w.key || w.drawn != w.rect)) || (w.visible && (!w.uploaded || w.sent != w.key || w.drawn != w.rect))
 }
 func (w *KittyWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
@@ -79,6 +85,7 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 	exiting := bytes.Contains(p, []byte("\x1b[?1049l"))
 	if exiting {
 		w.visible = false
+		w.images = nil
 		w.closed = true
 	}
 	var buf bytes.Buffer
@@ -99,6 +106,7 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 		// Save/restore cursor; C=1 prevents placement from advancing or scrolling it.
 		fmt.Fprintf(&buf, "\x1b7\x1b[%d;%dH\x1b_Ga=p,i=%d,p=1,c=%d,r=%d,C=1,z=1,q=2\x1b\\\x1b8", r.Y+1, r.X+1, w.imageID, r.Columns, r.Rows)
 	}
+	w.writeImages(&buf)
 	buf.WriteString("\x1b[?2026l")
 	if _, err := w.out.Write(buf.Bytes()); err != nil {
 		return 0, err
@@ -139,9 +147,18 @@ func (w *KittyWriter) Close() error {
 		w.timer.Stop()
 		w.timer = nil
 	}
+	var buf bytes.Buffer
+	for slot := range w.imageStates {
+		buf.WriteString(w.deleteImage(w.imageID + slot + 1))
+	}
+	w.imageStates = nil
+	w.images = nil
 	if w.uploaded {
 		w.uploaded = false
-		_, err := io.WriteString(w.out, w.remove())
+		buf.WriteString(w.remove())
+	}
+	if buf.Len() > 0 {
+		_, err := w.out.Write(buf.Bytes())
 		return err
 	}
 	return nil
