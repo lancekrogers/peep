@@ -2,7 +2,7 @@
 
 A terminal file explorer for pictures, animated GIFs, videos, and music.
 
-Browse silently, press Enter to play, and keep browsing while the current item continues. The first version renders media as ANSI true-color half-block cells inside the interface. Video and GIF output targets 12 frames per second; this is a working low-resolution terminal player, not a full-resolution Kitty graphics renderer.
+Browse silently, press Enter to play, and keep browsing while the current item continues. Still previews use native Kitty graphics automatically in direct Ghostty/Kitty sessions, preserving images up to 2048 pixels per dimension. Other terminals use ANSI color cells. Video and animated GIF playback currently use the 12 fps cell renderer.
 
 ## Install and run
 
@@ -18,6 +18,8 @@ just build
 ./bin/peep --play movie.mp4
 ./bin/peep --play photo.png animation.gif movie.mp4 song.flac
 ./bin/peep --doctor
+./bin/peep --renderer=kitty ~/Pictures  # explicit native protocol override
+./bin/peep --renderer=cells ~/Pictures # compatibility fallback
 
 # Install the executable into your Go bin directory
 just install
@@ -34,7 +36,7 @@ Without `--play`, startup is silent. Opening a directory lists its media and fol
 | `j/k`, up/down | Select file; select queue entry when queue is open |
 | `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
 | `Enter` | Enter directory or start selected media |
-| `/`, `Esc` | Filter filenames / go back (close overlay, return from focus, clear filter, then parent) |
+| `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
 | `Space`, `p` | Play/pause |
 | `s` | Stop and reset to zero |
@@ -51,9 +53,14 @@ Without `--play`, startup is silent. Opening a directory lists its media and fol
 | `a`, `Q` | Append selected file / toggle queue |
 | `d` in queue | Remove an inactive queue entry; never its file |
 | `f`, `v` | Focus preview / show now playing |
+| `B` | Toggle full-width browser |
 | `?`, `q`, `Ctrl+C` | Help / quit / quit |
 
+Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
+
 The interface uses a full-color theme, highlighted selection, bordered file/preview/queue panes, and a visible `../ Parent directory` entry. In narrow terminals the browser occupies the main pane; `f` switches to the preview. Click a file to select it, then press Enter to open or play.
+
+During music playback, the now-playing pane shows a 24-band spectrum calculated from the actual audio. It follows playback time and seeking, freezes on pause, and clears on stop. Mute and volume affect displayed intensity. This is a visualizer, not an audio equalization effect. Use `v` to return to it while browsing.
 
 Timelines always control the file named **NOW PLAYING**, even when the preview shows something else. Images use a slideshow clock, initially five seconds. GIFs play one duration before advancing. Rewind is backward seeking; continuous reverse playback is not implemented. Unknown-duration files have no percentage seek or end jump.
 
@@ -73,8 +80,8 @@ Integration fixtures and terminal transcripts are generated under ignored `tmp/`
 
 ## Bootstrap boundaries
 
-- Implemented: directory navigation, hidden-file toggle, filename filtering, still and animated previews, in-terminal video, music playback and tags, embedded cover art when FFmpeg exposes it, mixed queues, transport, speed, volume, repeat, and responsive focus/queue views.
-- The cell renderer uses a 120-column by 100-pixel decode cap. 12 fps is the target, not a universal performance guarantee. Slow terminals may render fewer frames. Native-resolution Kitty/iTerm2 graphics remain future work.
+- Implemented: directory navigation, hidden-file toggle, filename filtering, still and animated previews, in-terminal video, music playback, tags, and an audio-reactive spectrum, embedded cover art in static previews when FFmpeg exposes it, mixed queues, transport, speed, volume, repeat, and responsive focus/queue views.
+- The cell fallback uses a 120-column by 100-pixel decode cap. Native still previews preserve up to 2048 pixels per dimension and are placed by the terminal. Automatic selection is limited to direct Ghostty/Kitty sessions; multiplexers and unknown terminals default to cells. Other Kitty-compatible terminals can use `--renderer=kitty`. No iTerm2 inline-image adapter is implemented. 12 fps is a playback target, not a universal performance guarantee.
 - The queue stops with an error on a bad item; use next or select another file. Automatic skip-on-error is deferred. Stopping during load cancels it; Play retries the retained entry.
 - Preferences, queue state, and position are session-local. No automatic resume or persistent configuration yet.
 - Shuffle, image zoom/pan, custom bindings, timestamp entry, drag scrubbing, queue reordering, subtitles, and network streams are deferred from the broader design.

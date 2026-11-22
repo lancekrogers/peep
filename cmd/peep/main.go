@@ -10,17 +10,18 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/term"
 	"github.com/lancekrogers/peep/internal/player"
+	"github.com/lancekrogers/peep/internal/render"
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-const version = "0.1.1-dev"
+const version = "0.1.2-dev"
 
 func run() error {
 	flags := flag.NewFlagSet("peep", flag.ContinueOnError)
 	play := flags.Bool("play", false, "start playback explicitly")
 	doctor := flags.Bool("doctor", false, "report media dependencies")
 	showVersion := flags.Bool("version", false, "show version")
-	renderer := flags.String("renderer", "cells", "renderer: auto or cells")
+	renderer := flags.String("renderer", "auto", "still-image renderer: auto, kitty, or cells")
 	audio := flags.String("audio-output", "", "mpv audio output override (null for automated tests)")
 	flags.Usage = func() {
 		fmt.Fprint(flags.Output(), "peep — terminal pictures, GIFs, videos, and music\n\nUsage: peep [flags] [directory | media files...]\n")
@@ -36,9 +37,13 @@ func run() error {
 		fmt.Println("peep", version)
 		return nil
 	}
+	mode, err := render.Renderer(*renderer, os.Getenv)
+	if err != nil {
+		return err
+	}
 	if *doctor {
 		missing := false
-		fmt.Println("peep", version, "· renderer: ANSI true-color cells (12 fps target)")
+		fmt.Println("peep", version, "· still-image renderer:", mode, "· moving playback: cells")
 		for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
 			path, err := exec.LookPath(name)
 			if err != nil {
@@ -52,9 +57,6 @@ func run() error {
 			return fmt.Errorf("install missing media tools; see README.md")
 		}
 		return nil
-	}
-	if *renderer != "auto" && *renderer != "cells" {
-		return fmt.Errorf("renderer %q is not implemented; use cells", *renderer)
 	}
 	if !term.IsTerminal(os.Stdin.Fd()) || !term.IsTerminal(os.Stdout.Fd()) {
 		return fmt.Errorf("peep needs an interactive terminal; use --doctor for diagnostics")
@@ -72,7 +74,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	_, err = tea.NewProgram(model, tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx)).Run()
+	options := []tea.ProgramOption{tea.WithAltScreen(), tea.WithMouseCellMotion(), tea.WithContext(ctx)}
+	if mode == "kitty" {
+		writer := render.NewKittyWriter(os.Stdout)
+		defer writer.Close()
+		model.SetGraphics(writer)
+		options = append(options, tea.WithOutput(writer))
+	}
+	_, err = tea.NewProgram(model, options...).Run()
 	return err
 }
 func main() {

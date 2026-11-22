@@ -9,3 +9,5 @@ printf 'not an image\n' > tmp/fixtures/05-broken.png
 mkdir -p tmp/fixtures/folder
 
 ffmpeg -v error -y -i tmp/fixtures/01-image.png -frames:v 1 tmp/fixtures/06-photo.jpg
+
+ffmpeg -v error -y -f lavfi -i 'testsrc2=size=1200x800:rate=1' -frames:v 1 tmp/fixtures/07-detail.jpg

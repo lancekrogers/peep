@@ -45,7 +45,11 @@ func (m *Model) layout() layout {
 		}
 		return l
 	}
-	l.files = max(24, min(36, m.width/4))
+	if !m.showQueue && (m.browserOnly || m.filtering || m.preview.Path == "") {
+		l.files = available
+		return l
+	}
+	l.files = max(24, min(52, m.width/3))
 	l.preview = available - l.files - 1
 	if m.showQueue {
 		if m.width >= 110 {

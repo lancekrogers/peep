@@ -14,6 +14,11 @@ import (
 	"github.com/lancekrogers/peep/internal/render"
 )
 
+type nativeMsg struct {
+	id  int
+	png []byte
+	err error
+}
 type tickMsg time.Time
 type listMsg struct {
 	id      int
@@ -41,13 +46,24 @@ type controlMsg struct {
 }
 
 type Model struct {
+	stopPending                               bool
+	spectrum                                  <-chan media.SpectrumFrame
+	spectrumCancel                            context.CancelFunc
+	spectrumID                                int
+	spectrumPending                           *media.SpectrumFrame
+	bands, bandTarget                         [media.SpectrumBands]float64
+	spectrumError                             string
 	startState                                string
+	graphics                                  *render.KittyWriter
+	nativePNG                                 []byte
 	previewError                              string
 	timeline                                  bool
 	ctx                                       context.Context
 	backend                                   *player.Player
 	dir                                       string
 	entries                                   []browser.Entry
+	allEntries                                []browser.Entry
+	browserOnly                               bool
 	cursor, width, height                     int
 	hidden, filtering, focus, help, showQueue bool
 	filter, notice, state                     string
@@ -116,8 +132,8 @@ func tick() tea.Cmd            { return tea.Tick(time.Second/20, func(t time.Tim
 func (m *Model) Init() tea.Cmd { return tea.Batch(m.readDir(), tick()) }
 func (m *Model) readDir() tea.Cmd {
 	m.listID++
-	id, path, hidden, filter := m.listID, m.dir, m.hidden, m.filter
-	return func() tea.Msg { entries, err := browser.Read(path, hidden, filter); return listMsg{id, entries, err} }
+	id, path, hidden := m.listID, m.dir, m.hidden
+	return func() tea.Msg { entries, err := browser.Read(path, hidden, ""); return listMsg{id, entries, err} }
 }
 func (m *Model) selected() *browser.Entry {
 	if m.cursor < 0 || m.cursor >= len(m.entries) {
@@ -133,6 +149,7 @@ func (m *Model) previewSelection() tea.Cmd {
 	m.frames = nil
 	m.pending = nil
 	m.rows = nil
+	m.nativePNG = nil
 	m.displayingActive = false
 	m.previewError = ""
 	entry := m.selected()
@@ -162,14 +179,22 @@ func (m *Model) startFrames(info media.Info, start float64, active bool) tea.Cmd
 	m.frames = nil
 	m.pending = nil
 	m.rows = nil
+	m.nativePNG = nil
 	m.displayingActive = active
 	m.preview = info
 	m.previewError = ""
+	if active && info.Kind == media.Audio {
+		return nil
+	}
 	if !info.HasVisual {
 		return nil
 	}
 	ctx, cancel := context.WithCancel(m.ctx)
 	m.previewCancel = cancel
+	if m.graphics != nil && (!active || info.Kind == media.Image || info.Kind == media.Audio) {
+		id, path := m.previewID, info.Path
+		return func() tea.Msg { png, err := media.PreviewPNG(ctx, path); return nativeMsg{id, png, err} }
+	}
 	w, h := m.dimensions()
 	m.frames = media.Frames(ctx, info.Path, w, h, start, !active || info.Kind == media.Image || info.Kind == media.Audio)
 	return m.nextFrame()
@@ -215,7 +240,9 @@ func (m *Model) loadState(index int, desired string) tea.Cmd {
 	m.frames = nil
 	m.pending = nil
 	m.rows = nil
+	m.nativePNG = nil
 	m.previewID++
+	m.clearSpectrum()
 	m.index = index
 	m.queueCursor = index
 	m.loadID++
@@ -278,7 +305,8 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.notice = v.err.Error()
 			return m, nil
 		}
-		m.entries = v.entries
+		m.allEntries = v.entries
+		m.entries = browser.Filter(v.entries, m.filter)
 		if m.filter == "" && filepath.Dir(m.dir) != m.dir {
 			m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
 		}
@@ -324,6 +352,37 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.notice = ""
 		return m, m.startFrames(v.info, 0, false)
+	case spectrumMsg:
+		if v.id != m.spectrumID {
+			return m, nil
+		}
+		if !v.ok {
+			m.spectrum = nil
+			return m, nil
+		}
+		if v.frame.Err != nil {
+			m.spectrumError = v.frame.Err.Error()
+			m.spectrum = nil
+			return m, nil
+		}
+		if v.frame.Time <= m.position+0.04 {
+			m.bandTarget = v.frame.Levels
+			if m.state == "Paused" {
+				m.bands = v.frame.Levels
+			}
+			return m, m.nextSpectrum()
+		}
+		m.spectrumPending = &v.frame
+	case nativeMsg:
+		if v.id != m.previewID {
+			return m, nil
+		}
+		if v.err != nil {
+			m.previewError = v.err.Error()
+			m.notice = v.err.Error()
+			return m, nil
+		}
+		m.nativePNG = v.png
 	case frameMsg:
 		if v.id != m.previewID {
 			return m, nil
@@ -360,9 +419,13 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.state = m.startState
 		m.last = time.Now()
-		return m, m.showActive()
+		return m, tea.Batch(m.showActive(), m.startSpectrum())
 	case controlMsg:
 		m.busy = false
+		if m.stopPending {
+			m.stopPending = false
+			return m, m.stop()
+		}
 		if v.err != nil {
 			m.state = "Error"
 			m.notice = v.err.Error()
@@ -370,9 +433,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if v.seek != nil {
 			m.position = *v.seek
+			cmd := m.startSpectrum()
 			if m.displayingActive {
-				return m, m.showActive()
+				return m, tea.Batch(m.showActive(), cmd)
 			}
+			return m, cmd
 		}
 	case tickMsg:
 		now := time.Time(v)
@@ -410,12 +475,31 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+		cmds := []tea.Cmd{tick()}
+		if m.state == "Playing" {
+			for i := range m.bands {
+				target := m.bandTarget[i]
+				if target > m.bands[i] {
+					m.bands[i] = target
+				} else {
+					m.bands[i] = max(target, m.bands[i]-dt*1.8)
+				}
+			}
+		} else if m.state == "Ended" || m.state == "Stopped" {
+			m.bands = [media.SpectrumBands]float64{}
+		}
+		if m.spectrumPending != nil && m.spectrumPending.Time <= m.position+0.04 {
+			m.bandTarget = m.spectrumPending.Levels
+			m.spectrumPending = nil
+			cmds = append(cmds, m.nextSpectrum())
+		}
 		if m.pending != nil && m.pending.Time <= m.position+0.08 {
 			m.rows = render.Cells(*m.pending)
 			m.pending = nil
-			return m, tea.Batch(tick(), m.nextFrame())
+			cmds = append(cmds, m.nextFrame())
 		}
-		return m, tick()
+		return m, tea.Batch(cmds...)
+
 	case tea.MouseMsg:
 		return m, m.mouse(v)
 	case tea.KeyMsg:
@@ -432,4 +516,40 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.key(v)
 	}
 	return m, nil
+}
+
+func (m *Model) SetGraphics(writer *render.KittyWriter) { m.graphics = writer }
+func (m *Model) syncGraphics() {
+	if m.graphics == nil {
+		return
+	}
+	l := m.layout()
+	x := 2
+	if l.files > 0 {
+		x += l.files + 1
+	}
+	visible := !m.help && l.preview > 0 && m.width >= 35 && m.height >= 12
+	m.graphics.Set(m.nativePNG, m.previewID, render.Placement{X: x, Y: 3, Columns: l.preview - 2, Rows: l.body}, visible)
+}
+
+func (m *Model) refilter() tea.Cmd {
+	path := ""
+	if e := m.selected(); e != nil {
+		path = e.Path
+	}
+	m.entries = browser.Filter(m.allEntries, m.filter)
+	if m.filter == "" && filepath.Dir(m.dir) != m.dir {
+		m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
+	}
+	m.cursor = 0
+	if m.filter == "" && len(m.entries) > 1 && m.entries[0].Name == ".." {
+		m.cursor = 1
+	}
+	for i, e := range m.entries {
+		if e.Path == path {
+			m.cursor = i
+			break
+		}
+	}
+	return m.previewSelection()
 }

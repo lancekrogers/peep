@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
+	"github.com/lancekrogers/peep/internal/browser"
 	"github.com/lancekrogers/peep/internal/media"
 	"os"
 	"path/filepath"
@@ -165,5 +166,78 @@ func TestParentNavigationRestoresSelection(t *testing.T) {
 	}
 	if m.entries[0].Name != ".." {
 		t.Fatal("visible parent row missing")
+	}
+}
+
+func TestFolderUsesWholeBrowser(t *testing.T) {
+	m := imageModel()
+	m.width = 140
+	m.entries = []browser.Entry{{Path: "/music/long-directory-name", Name: "long-directory-name", Dir: true}}
+	l := m.layout()
+	if l.preview != 0 || l.files != 138 {
+		t.Fatalf("empty preview wastes directory space: %+v", l)
+	}
+	m.preview = media.Info{Path: "photo.jpg", HasVisual: true}
+	if m.layout().preview == 0 {
+		t.Fatal("media preview missing")
+	}
+	m.browserOnly = true
+	if m.layout().files != 138 {
+		t.Fatal("browser-only mode ignored")
+	}
+}
+func TestFilterUsesCachedEntries(t *testing.T) {
+	m := imageModel()
+	m.dir = "/does-not-exist"
+	m.allEntries = []browser.Entry{{Name: "work-however-you-like", Dir: true}, {Name: "vacation.jpg"}}
+	m.filter = "wrk"
+	m.refilter()
+	if len(m.entries) != 1 || m.entries[0].Name != "work-however-you-like" {
+		t.Fatal("cached folder filter failed")
+	}
+	if m.listID != 0 {
+		t.Fatal("typing filter initiated directory I/O")
+	}
+}
+
+func TestMusicSpectrumPauseAndStop(t *testing.T) {
+	m := imageModel()
+	m.active.Kind = media.Audio
+	m.preview = m.active
+	m.displayingActive = true
+	m.state = "Paused"
+	m.bands[3] = 0.8
+	m.bandTarget[3] = 0.1
+	m.Update(tickMsg(time.Now().Add(time.Second)))
+	if m.bands[3] != 0.8 {
+		t.Fatal("paused spectrum moved")
+	}
+	if !strings.Contains(ansi.Strip(m.View()), "spectrum frozen") {
+		t.Fatal("music view missing spectrum")
+	}
+	m.stop()
+	for _, level := range m.bands {
+		if level != 0 {
+			t.Fatal("stopped spectrum retained energy")
+		}
+	}
+}
+
+func TestSearchLeavesFocusView(t *testing.T) {
+	m := imageModel()
+	m.focus = true
+	m.showQueue = true
+	m.key(tea.KeyMsg{Type: tea.KeyCtrlF})
+	if m.focus || m.showQueue || !m.filtering {
+		t.Fatal("search did not reveal browser")
+	}
+}
+func TestStopDuringPendingControl(t *testing.T) {
+	m := imageModel()
+	m.busy = true
+	m.stop()
+	m.Update(controlMsg{})
+	if m.state != "Stopped" || m.position != 0 {
+		t.Fatal("stop was lost while a command was pending")
 	}
 }

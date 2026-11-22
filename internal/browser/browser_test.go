@@ -31,3 +31,21 @@ func TestRead(t *testing.T) {
 		t.Fatal("missing directory accepted")
 	}
 }
+
+func TestFilterFoldersAndFiles(t *testing.T) {
+	entries := []Entry{{Name: "20261114-222940-work-however-you-like", Dir: true}, {Name: "work.flac"}, {Name: "walk-home.mp4"}, {Name: "unrelated.png"}}
+	got := Filter(entries, "WORK")
+	if len(got) != 2 || got[0].Name != "work.flac" {
+		t.Fatalf("substring priority: %+v", got)
+	}
+	got = Filter(entries, "wrk hwevr")
+	if len(got) != 1 || !got[0].Dir {
+		t.Fatalf("fuzzy directory search: %+v", got)
+	}
+	if got := Filter(entries, "zzzz"); len(got) != 0 {
+		t.Fatal("unmatched filter returned entries")
+	}
+	if len(Filter(entries, "")) != len(entries) {
+		t.Fatal("clearing filter lost entries")
+	}
+}

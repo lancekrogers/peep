@@ -29,3 +29,11 @@ The bootstrap proof established that separate frame decoding can coexist with li
 A user screenshot exposed a real JPEG failure that PNG-only still fixtures missed: FFmpeg input seeking at `-ss 0` returned no frames for a JPEG. Still images now decode without seeking, even when their slideshow clock is nonzero. Single-frame decode has a ten-second timeout, and a failure replaces loading text with an explicit preview error.
 
 Added JPEG regression cases at zero and nonzero slideshow times, odd preview widths, visible parent navigation, selection restoration, full-color layout bounds, error-state rendering, timeline keyboard/mouse seeking, and a live PTY JPEG preview. The full-color view was also rendered from an actual PTY transcript and visually inspected, revealing and correcting a truncated parent label and low-contrast pane titles. Artifacts remain in ignored `tmp/acceptance/`.
+
+## Native images and search follow-up
+
+Added a 1200 x 800 JPEG fixture and verified that its native PNG payload retains those dimensions. Protocol tests check lossless chunk reconstruction, bounded chunk size, upload reuse, placement coordinates, overlay clearing, and alternate-screen cleanup. The PTY suite explicitly exercises both the cell renderer and native upload/placement, including help and resize. Native terminal pixel rendering itself has not been visually verified in a graphical terminal.
+
+Folder layout tests ensure that empty preview space is reclaimed, long-name browsing remains available via `B`, and cached fuzzy filtering works without another directory read. PTY checks exercise Ctrl+F search and opening a matched folder. Existing playback, JPEG, mouse/timeline, race, and cleanup checks remain in the suite.
+
+Spectrum tests distinguish silence, a low-frequency tone, and a high-frequency tone; exercise real PCM extraction with seek timestamps and cancellation; and check paused/stopped display behavior. The PTY audio session checks that real spectrum bars are emitted during playback. Null audio output remains the automated playback device.

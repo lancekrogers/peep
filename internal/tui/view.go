@@ -65,12 +65,22 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 		out[y] = row
 	}
 	if count == 0 {
-		out[h/2] = color(center("No media found", w), muted)
+		label := "No media found"
+		if m.filter != "" {
+			label = "No matches · Esc clears search"
+		}
+		out[h/2] = color(center(label, w), muted)
 	}
 	return out
 }
 func (m *Model) previewRows(w, h int) []string {
 	out := make([]string, h)
+	if m.displayingActive && m.active.Kind == media.Audio {
+		return m.spectrumRows(w, h)
+	}
+	if len(m.nativePNG) > 0 {
+		return out
+	}
 	if len(m.rows) > 0 {
 		offset := max(0, (h-len(m.rows))/2)
 		for i, row := range m.rows {
@@ -127,6 +137,7 @@ func (m *Model) buttons() []transportButton {
 	return []transportButton{{"[  ◀◀ -5s", "["}, {play + "  Space", " "}, {"■ Stop  s", "s"}, {"+5s ▶▶  ]", "]"}}
 }
 func (m *Model) View() string {
+	m.syncGraphics()
 	w, h := m.width, m.height
 	if w < 35 || h < 12 {
 		return fmt.Sprintf("peep · %s\nResize to at least 35x12\nBackspace parent · Esc back\nSpace play/pause · q quit", m.state)
@@ -144,7 +155,11 @@ func (m *Model) View() string {
 	if m.timeline {
 		mode = "TIMELINE"
 	}
-	add(" " + color("◉ peep", accent) + "  " + color("terminal media", muted) + "   " + badge(mode) + "  " + color("? help · q quit", muted))
+	if m.filtering {
+		add(" " + color("/ Search files & folders: ", accent) + render.Safe(m.filter) + color("▏   Enter keep · Esc clear", muted))
+	} else {
+		add(" " + color("◉ peep", accent) + "  " + badge(mode) + "  " + color("/ Search files & folders · Ctrl+F", fg) + "  " + color("? help · q quit", muted))
+	}
 	add(" " + color("‹ Backspace parent", accent) + "  " + render.Safe(m.dir))
 	if m.help {
 		for _, line := range box("Keyboard & mouse", m.helpRows(w-4, l.body), w-2, l.panelHeight, true) {
@@ -153,7 +168,7 @@ func (m *Model) View() string {
 	} else {
 		panes := [][]string{}
 		if l.files > 0 {
-			panes = append(panes, box(fmt.Sprintf("Files · %d", len(m.entries)), m.fileRows(l.files-2, l.body, false), l.files, l.panelHeight, !m.timeline && !m.showQueue))
+			panes = append(panes, box(m.fileTitle(), m.fileRows(l.files-2, l.body, false), l.files, l.panelHeight, !m.timeline && !m.showQueue))
 		}
 		if l.preview > 0 {
 			title := "Preview"
@@ -210,7 +225,7 @@ func (m *Model) View() string {
 		controls += fill(" "+b.label+" ", len([]rune(b.label))+2, selectedBG) + "  "
 	}
 	add(controls)
-	status := "Ready · Select to preview, Enter to play"
+	status := "Ready · / or Ctrl+F search files & folders · Enter open/play"
 	if m.filter != "" || m.filtering {
 		status = "Filter: " + render.Safe(m.filter)
 	} else if m.notice != "" {
@@ -220,6 +235,13 @@ func (m *Model) View() string {
 	}
 	add(" " + color(status, muted))
 	add(" " + color("↑↓ select   Enter open/play   Backspace parent   Esc back   / filter", fg))
-	add(" " + color("f focus   Q queue   t timeline   { / } seek 30s   ? all controls", muted))
+	add(" " + color("f focus   B browser only   Q queue   t timeline   { / } seek 30s   ? all controls", muted))
 	return strings.Join(lines, "\n")
+}
+
+func (m *Model) fileTitle() string {
+	if m.filter != "" {
+		return fmt.Sprintf("Matches · %d / %d", len(m.entries), len(m.allEntries))
+	}
+	return fmt.Sprintf("Files · %d", len(m.entries))
 }

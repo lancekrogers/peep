@@ -13,6 +13,7 @@ import (
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if key == "ctrl+c" || (!m.filtering && key == "q") {
+		m.clearSpectrum()
 		if m.previewCancel != nil {
 			m.previewCancel()
 		}
@@ -26,10 +27,10 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		case "esc":
 			m.filtering = false
 			m.filter = ""
-			return m.readDir()
+			return m.refilter()
 		case "enter":
 			m.filtering = false
-			return nil
+			return m.resizeFrame()
 		case "backspace":
 			r := []rune(m.filter)
 			if len(r) > 0 {
@@ -40,7 +41,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 				m.filter += string(k.Runes)
 			}
 		}
-		return m.readDir()
+		return m.refilter()
 	}
 	if m.help {
 		if key == "?" || key == "esc" {
@@ -82,7 +83,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			return m.previewSelection()
 		} else if m.filter != "" {
 			m.filter = ""
-			return m.readDir()
+			return m.refilter()
 		} else {
 			return m.navigate(filepath.Dir(m.dir))
 		}
@@ -97,9 +98,18 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return m.resizeFrame()
 	case "v":
 		return m.showActive()
-	case "/":
+	case "/", "ctrl+f":
+		m.focus = false
+		m.showQueue = false
 		m.timeline = false
 		m.filtering = true
+	case "B":
+		m.browserOnly = !m.browserOnly
+		if m.browserOnly {
+			m.focus = false
+		}
+		m.timeline = false
+		return m.resizeFrame()
 	case "H":
 		m.hidden = !m.hidden
 		return m.readDir()
@@ -138,6 +148,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			if e.Dir {
 				return m.navigate(e.Path)
 			}
+			m.browserOnly = false
 			return m.queueFromSelection()
 		}
 	case "a":
@@ -268,6 +279,7 @@ func (m *Model) toggle() tea.Cmd {
 	if m.state == "Error" || m.state == "Ended" || (m.state == "Stopped" && m.active.Kind == "") {
 		return m.load(m.index)
 	}
+	wasStopped := m.state == "Stopped"
 	paused := m.state == "Playing"
 	if paused {
 		m.state = "Paused"
@@ -278,9 +290,18 @@ func (m *Model) toggle() tea.Cmd {
 	if m.active.Kind == media.Image {
 		return nil
 	}
-	return m.control(func(ctx context.Context, p *player.Player) error { return p.Pause(ctx, paused) }, nil)
+	cmd := m.control(func(ctx context.Context, p *player.Player) error { return p.Pause(ctx, paused) }, nil)
+	if wasStopped && m.active.Kind == media.Audio {
+		return tea.Batch(cmd, m.startSpectrum())
+	}
+	return cmd
 }
 func (m *Model) stop() tea.Cmd {
+	if m.busy && m.state != "Loading" {
+		m.stopPending = true
+		return nil
+	}
+	m.clearSpectrum()
 	if m.state == "Empty" {
 		return nil
 	}

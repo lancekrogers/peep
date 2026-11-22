@@ -29,7 +29,7 @@ class Session:
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)
         child = "import subprocess,sys,termios; before=termios.tcgetattr(0); p=subprocess.run(sys.argv[1:]); after=termios.tcgetattr(0); mask=~getattr(termios,'PENDIN',0); before[3]&=mask; after[3]&=mask; restored=after==before; print('PEEP_TERMINAL_RESTORED='+str(restored),flush=True); sys.exit(p.returncode if restored else 99)"
-        self.proc = subprocess.Popen([sys.executable, '-c', child, str(ROOT/'bin/peep'), '--audio-output=null', *args],
+        self.proc = subprocess.Popen([sys.executable, '-c', child, str(ROOT/'bin/peep'), '--audio-output=null', '--renderer=cells', *args],
             cwd=ROOT, stdin=self.slave, stdout=self.slave, stderr=self.slave,
             env=env, preexec_fn=terminal)
         self.log = bytearray()
@@ -119,16 +119,28 @@ try:
     s=Session('gif','--play','tmp/fixtures/02-animation.gif');sessions.append(s)
     s.expect(b'[Playing]');s.expect(b'00:01 / 00:03');s.send(b' ');s.expect(b'[Paused]');s.finish()
     s=Session('audio','--play','tmp/fixtures/04-audio.wav');sessions.append(s)
-    s.expect(b'[Playing]');s.expect(b'00:01 / 00:08')
+    s.expect(b'[Playing]')
+    if b'AUDIO SPECTRUM' not in s.log:s.expect(b'AUDIO SPECTRUM')
+    s.expect(b'00:01 / 00:08')
+    (ARTIFACTS/'audio-playing.ansi').write_bytes(s.log)
+    assert b'\xe2\x96\x88' in s.log, 'music spectrum bars absent'
     s.send(b'j');s.read(.3)
     s.send(b' ');s.expect(b'[Paused]');s.send(b's');s.expect(b'[Stopped] 00:00');s.finish()
     s=Session('broken','--play','tmp/fixtures/05-broken.png');sessions.append(s)
     s.expect(b'[Error]');s.finish()
     s=Session('browse','tmp/fixtures');sessions.append(s)
     s.expect(b'Parent directory');s.send(b'/video');s.expect(b'Filter: video');s.send(b'\r');s.send(b'\r');s.expect(b'[Playing]');s.finish()
+    s=Session('search','tmp/fixtures');sessions.append(s)
+    s.expect(b'Search files & folders');s.send(b'\x06fldr');s.expect(b'Matches');s.send(b'\r');s.send(b'\r');s.expect(b'Files \xc2\xb7 1');s.finish()
     s=Session('navigation','tmp/fixtures/folder');sessions.append(s)
     s.expect(b'Parent directory');s.send(b'\r');s.expect(b'01-image.png')
     s.send(b'\r');s.expect(b'Files \xc2\xb7 1');s.send(b'\x7f');s.expect(b'01-image.png');s.finish()
+    s=Session('native','--renderer=kitty','tmp/fixtures/07-detail.jpg');sessions.append(s)
+    data=s.expect(b'a=t,f=100')
+    if b'a=p,' not in data:s.expect(b'a=p,')
+    assert b'\xe2\x96\x80' not in s.log, 'native preview fell back to cells'
+    s.send(b'?');s.expect(b'a=d,d=I');s.send(b'?');s.expect(b'a=t,f=100')
+    s.resize(90,25);s.expect(b'a=p,');s.finish()
     s=Session('mixed','--play','tmp/fixtures/01-image.png','tmp/fixtures/02-animation.gif','tmp/fixtures/03-video.mp4','tmp/fixtures/04-audio.wav');sessions.append(s)
     s.expect(b'[Playing]');s.expect(b'NOW PLAYING  02-animation.gif',timeout=8)
     s.expect(b'NOW PLAYING  03-video.mp4',timeout=6)

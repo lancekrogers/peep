@@ -1,7 +1,9 @@
 package media
 
 import (
+	"bytes"
 	"context"
+	"image/png"
 	"os"
 	"path/filepath"
 	"testing"
@@ -98,5 +100,27 @@ func TestStillDoesNotSeek(t *testing.T) {
 		if f.Err != nil || len(f.RGB) != 61*38*3 {
 			t.Fatalf("JPEG at slideshow time %v: %v (%d bytes)", pos, f.Err, len(f.RGB))
 		}
+	}
+}
+
+func TestNativePreviewPreservesPixels(t *testing.T) {
+	if os.Getenv("PEEP_INTEGRATION") == "" {
+		t.Skip("integration")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	data, err := PreviewPNG(ctx, "../../tmp/fixtures/07-detail.jpg")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := png.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 1200 || cfg.Height != 800 {
+		t.Fatalf("image reduced to %dx%d", cfg.Width, cfg.Height)
+	}
+	if _, err := PreviewPNG(ctx, "../../tmp/fixtures/05-broken.png"); err == nil {
+		t.Fatal("bad native preview accepted")
 	}
 }
