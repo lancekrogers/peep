@@ -37,8 +37,8 @@ func Read(path string, hidden bool, filter string) ([]Entry, error) {
 			}
 		}
 		kind := media.Classify(full)
-		if !dir && kind == "" {
-			continue
+		if st, err := os.Stat(full); err != nil || !st.Mode().IsRegular() {
+			kind = ""
 		}
 		entries = append(entries, Entry{Path: full, Name: d.Name(), Dir: dir, Kind: kind})
 	}

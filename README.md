@@ -28,7 +28,7 @@ just install
 
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 
-Without `--play`, startup is silent. Opening a directory lists its media and folders. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Files are never modified or deleted.
+Without `--play`, startup is silent. Opening a directory lists files and folders. Text and Markdown files have scrollable previews; binary and special files show an unavailable-preview message. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Files are never modified or deleted.
 
 ## Controls
 
@@ -36,7 +36,10 @@ Without `--play`, startup is silent. Opening a directory lists its media and fol
 |---|---|
 | `j/k`, up/down | Select file; select queue entry when queue is open |
 | `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
-| `Enter` | Enter directory or start selected media |
+| `Enter` | Enter directory, focus a document, or start selected media |
+| `PgUp/PgDn` | Scroll document preview |
+| `j/k`, arrows, Home/End in document focus | Scroll document / beginning / end |
+| `R` on Markdown | Toggle styled Markdown and source |
 | `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
 | `Space`, `p` | Play/pause |
@@ -99,6 +102,8 @@ Integration fixtures and terminal transcripts are generated under ignored `tmp/`
 
 See [architecture](docs/architecture.md) for the rendering and playback boundary. The owning campaign design is `workflow/design/peep` (WI-aa8358).
 
-## Planned document previews
+## Document previews
 
-The [file preview proposal](docs/file-previews.md) describes text/Markdown previews, embedded local images, and optional Mermaid rendering in separate PRs. These are planned features, not part of the current executable. Development now uses feature branches and pull requests targeting `main`.
+Text and Markdown previews are implemented on this branch. Enter or `f` focuses a document; Escape returns to the browser. File filtering and playback controls remain available while reading. Reads are bounded to 2 MiB and layout to 12,000 rows, with explicit truncation markers. Non-UTF-8, binary, and special files are not decoded as text. Documents never enter media queues. Remote document resources are not fetched.
+
+The [file preview proposal](docs/file-previews.md) describes the next slices: embedded local images and optional native Mermaid rendering. Those image/diagram features are not part of this first slice. Development uses feature branches and reviewable PRs.
