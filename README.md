@@ -3,6 +3,7 @@
 </p>
 <p align="center"><strong>Your files. In focus.</strong></p>
 <p align="center">
+  <a href="https://github.com/Obedience-Corp/festival"><img src="https://img.shields.io/badge/built%20with-Festival-7c3aed.svg" alt="Built with Festival"></a>
   <a href="https://github.com/lancekrogers/peep/actions/workflows/check.yml"><img src="https://img.shields.io/badge/CI-GitHub_Actions-58d6be?style=flat" alt="CI on GitHub Actions"></a>
   <img src="https://img.shields.io/badge/Go-1.27%2B-00ADD8?style=flat" alt="Go 1.27 or newer">
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Linux-58d6be?style=flat" alt="macOS and Linux">
