@@ -98,3 +98,7 @@ Integration fixtures and terminal transcripts are generated under ignored `tmp/`
 - Support is based on the installed FFmpeg/mpv build. Filename recognition is not a codec guarantee. Tested fixture details live in [verification](docs/verification.md).
 
 See [architecture](docs/architecture.md) for the rendering and playback boundary. The owning campaign design is `workflow/design/peep` (WI-aa8358).
+
+## Planned document previews
+
+The [file preview proposal](docs/file-previews.md) describes text/Markdown previews, embedded local images, and optional Mermaid rendering in separate PRs. These are planned features, not part of the current executable. Development now uses feature branches and pull requests targeting `main`.

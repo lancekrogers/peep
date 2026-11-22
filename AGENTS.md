@@ -6,5 +6,6 @@ Go terminal media explorer. Read README.md and docs/architecture.md before chang
 - Keep filesystem and subprocess I/O cancellable. Bound frame buffers; discard stale preview generations.
 - Run `just check` before committing. For playback changes also run `just test-integration` and `just test-tui`.
 - Use the modular `just/` recipes; keep the root justfile an index.
-- Use `camp p commit` in the owning campaign. Bootstrap commits go directly to main as authorized; subsequent work follows the user's requested workflow.
+- Bootstrap is complete. Use feature branches and ready-for-review pull requests targeting `main`. Do not push changes directly to `main` or merge PRs without explicit user authorization.
+- Use `camp p commit` in the owning campaign. For unmerged PR branches, use `--no-sync`; update the campaign submodule reference after the change lands on project `main`.
 - No AI coauthor trailers. Do not commit generated fixtures or binaries.
