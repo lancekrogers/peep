@@ -6,6 +6,7 @@ distribution version: (package-all version)
 # Verify npm installation and embedded Mermaid without registry downloads.
 test-distribution:
     node --test scripts/npm-launcher.test.cjs scripts/npm-publish.test.cjs
+    python3 scripts/publish-retry-smoke.py
     node scripts/npm-install-smoke.cjs dist/distribution
 
 # Validate .SRCINFO, build and install the AUR package in disposable Arch Linux.
