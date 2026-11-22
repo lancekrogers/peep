@@ -123,7 +123,7 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 		m.docImageCtx, m.docImageCancel = context.WithCancel(m.ctx)
 	}
 	if m.docMermaid == nil {
-		m.docMermaid = document.NewMermaid("mmdg")
+		m.docMermaid = document.NewMermaid("")
 	}
 	renderer := m.docMermaid
 	var cmds []tea.Cmd

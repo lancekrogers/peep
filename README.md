@@ -6,25 +6,38 @@ Browse silently, press Enter to play, and keep browsing while the current item c
 
 ## Install and run
 
-Requires Go 1.24+, FFmpeg (`ffmpeg` and `ffprobe`), and mpv. `just` runs development recipes. The initial targets are macOS and Linux with a UTF-8, true-color terminal.
+Mermaid rendering and fonts are compiled into peep. A packaged executable needs no Go, Node, browser, or separate `mmdg` installation. macOS and Linux on arm64/amd64 are supported.
+
+From an extracted peep archive:
 
 ```sh
-# macOS media dependencies
-brew install ffmpeg mpv just
+./bin/peep --install                  # defaults to ~/.local; installs missing media tools
+./bin/peep --install --prefix /your/prefix
+./bin/peep --install --no-deps         # offline/managed hosts: skip media dependency setup
+~/.local/bin/peep --doctor
+```
 
-# From this repository
-just build
+The installer uses Homebrew on macOS or apt-get/dnf/pacman on Linux for missing FFmpeg/mpv tools. It may request sudo through the package manager. If the manager or packages are unavailable, installation reports the failure before replacing peep. `--no-deps` still supports documents and Mermaid diagrams; media features require their tools.
+
+Installation stages and verifies a versioned executable, then atomically updates `<prefix>/bin/peep`. Old versions remain available to running processes. Use the same command for upgrades. Add `<prefix>/bin` to PATH and check `command -v peep` if an older Go-bin installation takes precedence.
+
+Building from source requires **Go 1.27+** and `just`:
+
+```sh
+just build                         # includes Mermaid automatically
+just install                       # installs into ~/.local with media setup
+just package                       # archive + SHA-256 file for the current host
+just package-all                   # macOS/Linux × arm64/amd64 archives
 ./bin/peep ~/Pictures
 ./bin/peep --play movie.mp4
 ./bin/peep --play photo.png animation.gif movie.mp4 song.flac
 ./bin/peep --doctor
 ./bin/peep --seek-step=1s --play movie.mp4
-./bin/peep --renderer=kitty ~/Pictures  # explicit native protocol override
-./bin/peep --renderer=cells ~/Pictures # compatibility fallback
-
-# Install the executable into your Go bin directory
-just install
+./bin/peep --renderer=kitty ~/Pictures
+./bin/peep --renderer=cells ~/Pictures
 ```
+
+Package archives contain one executable, README, and renderer notices. `--licenses` displays those notices from the executable itself. CI builds host packages and checks installation/rendering without a helper or language toolchain on PATH; publishing a release is a separate action.
 
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 
@@ -129,13 +142,10 @@ Source and configuration files use filename-based syntax highlighting (including
 
 Markdown also displays local inline and reference-style images after their containing block. Native graphics preserve pixels and clip images when scrolling; other terminals show color cells. Missing images show an error, and remote images are not fetched. GIFs embedded in documents are still posters. `R` switches back to source.
 
-Mermaid fences and `.mmd`/`.mermaid` files render through the optional [mmdg](https://github.com/bvolpato/mermaid-go-renderer) helper when native graphics are available. `R` switches between diagram and source. Missing helpers, invalid diagrams and cell-only terminals keep readable source with an explanation. Top-level fences are replaced by diagrams; diagrams in lists/quotes appear after their containing block, preserving the surrounding text.
+Mermaid fences and `.mmd`/`.mermaid` files render through the built-in [mmdg Go library](https://github.com/bvolpato/mermaid-go-renderer) when native graphics are available. `R` switches between diagram and source. Invalid diagrams and cell-only terminals keep readable source with an explanation. Top-level fences are replaced by diagrams; diagrams in lists/quotes appear after their containing block, preserving the surrounding text.
 
-```sh
-just install-mermaid  # optional; installs pinned mmdg v0.13.0, requires Go 1.27+
-peep --doctor        # reports whether the optional helper is on PATH
-```
+The renderer is pinned to v0.13.0 in peep's Go module, with embedded fonts. Peep builds with Go 1.27+ and CGO disabled. Rendering runs in a private worker mode of the same executable so selection changes and timeouts can cancel both layout and PNG conversion. No additional executable is installed or searched on PATH.
 
-Peep itself still builds with Go 1.24+ and CGO disabled. The helper needs neither Node nor a browser; it does include an embedded Goja JavaScript engine. It is an independent installation, not a dependency of peep's Go module. Flowcharts and sequence diagrams are verified; other Mermaid types depend on the helper's support. Mermaid renders use a dark background, embedded fonts, bounded input/output and a cancellable deadline. No links are opened and no remote image assets are fetched.
+Flowcharts, sequence diagrams, and class diagrams are tested. PNGs fit within 1600 × 1600 pixels; the source limit is 128 KiB and the worker deadline is eight seconds. Invalid diagrams retain readable source and an error. No links are opened and no remote image assets are fetched. `just test-mermaid` exercises the built-in renderer; `just test-package` verifies a relocated and installed package with an empty tool PATH.
 
 Development uses feature branches and reviewable PRs. Planning lives in the My_Tools campaign work item WI-aa8358 (`workflow/design/peep`).

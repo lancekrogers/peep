@@ -14,7 +14,7 @@ This deliberately trades duplicate video decoding for a simple, isolated bootstr
 
 Resource limits: 10-second metadata probe, 10-second file-load deadline, 3-second IPC commands, two queued frames, 120 x 100 maximum cell decode size; native PNG limits are described below. Selection, resize, seek, and exit cancel obsolete decoder processes. Preview IDs reject late results. Filename extensions select candidate media types; FFprobe validates actual streams before playback.
 
-Runtime dependencies are external installations, not bundled binaries. The Go executable cross-compiles with CGO disabled; mpv/FFmpeg and a suitable terminal are required on the destination. Windows IPC is not implemented.
+Media dependencies remain external installations. Mermaid and its fonts are compiled into peep. The Go executable cross-compiles with CGO disabled; mpv/FFmpeg and a suitable terminal are required for media on the destination. Windows IPC is not implemented.
 
 Future graphics backends must preserve a single terminal writer, cancellation, bounded buffering, and the preview-versus-playback distinction. The broader campaign design remains the product direction; README.md documents what this bootstrap actually implements.
 
@@ -52,8 +52,14 @@ Goldmark parses Markdown structurally and Glamour's ANSI renderer styles complet
 Parsed image references resolve relative to the document. Only local regular files are decoded; network and data URLs are rejected. Two cancellable decodes may run at once. Visible images share a 48 MiB PNG budget and at most eight native placements. Offscreen pixels are released while dimensions remain to preserve scroll geometry. Each result carries the document generation. Native placements crop source pixels to the viewport; cells use the same reserved rows. Source mode, overlays, navigation and exit remove owned placements.
 
 
-## Optional Mermaid rendering
+## Built-in Mermaid rendering
 
-`internal/document.Mermaid` invokes `mmdg` with fixed arguments and diagram source on stdin. No shell or Node/browser process is involved. Source is limited to 128 KiB, stdout to 20 MiB, stderr to 4 KiB, and execution to an eight-second context deadline (plus the helper's five-second render deadline). PNG validation applies the document pixel limit before decoding. A per-application cache holds at most 16 PNGs/32 MiB; keys include source, helper identity/modification time, theme/size and date. Width changes reuse PNGs. Ordinary image limits and generation checks also apply.
+The mmdg v0.13.0 Go library is compiled into peep, including its fonts; Go 1.27+ is required to build. `internal/diagram` calls `RenderContext`, normalizes the root SVG viewport to fit within 1600 pixels, then calls `SVGToPNG`. The raster API has no context parameter, so `internal/document.Mermaid` starts a private worker mode of the same peep executable. It resolves the executable once and never looks up a renderer on PATH. Worker stdout is exclusively PNG data; only Bubble Tea writes terminal output.
 
-The optional helper is pinned to mmdg v0.13.0 in the install recipe. It requires Go 1.27, so it stays outside peep's Go 1.24 module. mmdg uses an embedded Goja engine, without an external JavaScript runtime or browser. Missing/failed helpers and cell-only clients retain diagram source. The integration suite verifies flowcharts and sequence diagrams, not complete Mermaid parity.
+Source is limited to 128 KiB, intermediate SVG to 8 MiB, stdout to 20 MiB, stderr to 4 KiB, and execution to an eight-second parent deadline. Context cancellation kills the worker, including rasterization. The five-second library context bounds layout. A per-application cache holds at most 16 PNGs/32 MiB, keyed by source, executable identity, theme/size, and date. Existing document generation and pixel limits still apply. Invalid diagrams and cell-only clients retain source.
+
+## Installation and archives
+
+`internal/installation` copies the running executable into a temporary version directory, verifies its SHA-256, and atomically changes the public symlink. Versions are content-addressed and retained for running processes. Cancellation or failed activation leaves the existing public executable intact. CLI installation can provision media dependencies through the host package manager; tests use `--no-deps` and isolated prefixes.
+
+`cmd/peep-package` builds a target executable with CGO disabled and creates a tar.gz plus checksum. README and upstream renderer notices accompany it; notices are also embedded for `--licenses`. Package tests extract and relocate archives, install into a temporary prefix, remove the extracted source, and render through the installed executable with no tools on PATH. Native-protocol PTY tests verify image payloads and process cleanup; they do not prove a terminal emulator's actual pixels.
