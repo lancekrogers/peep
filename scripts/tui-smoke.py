@@ -26,7 +26,7 @@ try:
     s.send(b'[');s.expect(b'00:01 / 00:08')
     s.send(b't');s.expect(b'TIMELINE');s.send(b'\x1b[C');s.expect(b'00:06 / 00:08');s.send(b'\x1b[D');s.expect(b'00:01 / 00:08');s.send(b't')
     s.send(b'\x1b[<0;56;26M');s.expect(b'00:04 / 00:08');s.send(b'\x1b[<0;56;26m')
-    s.send(b'?');s.expect(b'BROWSE');s.send(b'?')
+    s.send(b'?');s.expect(b'Keyboard & mouse');s.send(b'?')
     s.resize(70,20);s.read(.5);s.resize(110,30);s.read(.5)
     s.send(b's');s.expect(b'[Stopped] 00:00')
     s.send(b' ');s.expect(b'[Playing]');s.finish()

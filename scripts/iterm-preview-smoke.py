@@ -85,7 +85,7 @@ try:
                 # Starting playback may hide the static preview once; frame
                 # replacement must not repeatedly expose an empty placement set.
                 assert s.blank_transitions <= 1, 'blank gaps between video frames'
-            s.send(b'?'); s.expect(b'BROWSE')
+            s.send(b'?'); s.expect(b'Keyboard & mouse')
             s.send(b'?'); s.read(.2)
             s.finish()
             assert not s.displayed, 'image placements survived exit'
