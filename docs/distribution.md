@@ -86,6 +86,10 @@ Merge the tap PR, then test fresh installations through each public channel
 and run `peep --version` and `peep --doctor`. npm installations need FFmpeg/mpv
 installed separately; see [installation](install.md).
 
+Rerunning a channel for the same version is safe: Homebrew reuses an existing
+update branch/PR or recognizes a merged formula; AUR skips an identical recipe;
+npm checks published tarball integrity before skipping it.
+
 Published versions are immutable. If a channel fails, resolve its credential
 or package issue and rerun that channel. If npm publication stopped halfway,
 the publisher verifies already-published packages against the release tarball

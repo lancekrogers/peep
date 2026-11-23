@@ -33,6 +33,7 @@ jobs:
           go run ./cmd/peep-release --version "$VERSION"
           bash scripts/distribution.sh pack
       - run: node --test scripts/npm-launcher.test.cjs scripts/npm-publish.test.cjs
+      - run: python3 scripts/publish-retry-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: peep-distribution
