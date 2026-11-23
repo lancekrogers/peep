@@ -12,7 +12,7 @@ from tui_session import Session, ROOT
 
 system={'Darwin':'darwin','Linux':'linux'}[platform.system()]
 arch={'arm64':'arm64','aarch64':'arm64','x86_64':'amd64'}[platform.machine()]
-archive=ROOT/'dist'/f'peep_0.2.0-dev_{system}_{arch}.tar.gz'
+archive=ROOT/'dist'/f'peep_dev_{system}_{arch}.tar.gz'
 expected=Path(str(archive)+'.sha256').read_text().split()[0]
 assert hashlib.sha256(archive.read_bytes()).hexdigest()==expected,'archive checksum mismatch'
 fixture=ROOT/'tmp/package-fixtures'
