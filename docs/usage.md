@@ -43,6 +43,8 @@
 | `B` | Toggle full-width browser |
 | `?`, `q`, `Ctrl+C` | Help / quit / quit |
 
+Help groups shortcuts by task and adapts to the terminal width. Use `j`/`k`, arrow keys, Page Up/Down, or the mouse wheel to scroll; Home/End jumps to the first/last section. `?` or Escape closes help. Displayed paths within your home directory use `~`; file operations still use the full path.
+
 Search is immediate and local to the current directory. It matches case-insensitive substrings and fuzzy subsequences; space-separated terms must all match. Queries containing glob syntax instead match the whole filename (for example, `rec-*` or `*.txt`). Results are filtered from the cached listing. Enter keeps the filter; Esc clears it. Directory selection uses the full-width browser rather than an empty preview pane.
 
 File and queue rows have one-based numbers, including the parent entry. Numbers follow the current filtered list. Type colors distinguish directories, media, documents, source, configuration, archives, and PDFs; text badges remain visible. Counts appear beside the current mode and Escape cancels an unfinished command. `Ctrl+F` remains search.

@@ -13,6 +13,8 @@ const (
 	fg         = "218;226;239"
 	muted      = "126;146;170"
 	accent     = "88;214;190"
+	danger     = "245;135;145"
+	warning    = "235;190;105"
 	border     = "56;75;98"
 	selectedBG = "38;75;89"
 )
@@ -78,6 +80,10 @@ func box(title string, rows []string, w, h int, focused bool) []string {
 	if focused {
 		c = accent
 	}
+	return boxColor(title, rows, w, h, c)
+}
+
+func boxColor(title string, rows []string, w, h int, c string) []string {
 	inner := max(1, w-2)
 	title = " " + title + " "
 	title = ansi.Truncate(title, inner, "")

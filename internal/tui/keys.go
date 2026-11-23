@@ -57,9 +57,22 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return m.refilter()
 	}
 	if m.help {
-		if key == "?" || key == "esc" {
+		switch key {
+		case "?", "esc":
 			m.help = false
 			return m.requestDocumentImages()
+		case "j", "down":
+			m.scrollHelp(1)
+		case "k", "up":
+			m.scrollHelp(-1)
+		case "pgdown", "ctrl+d":
+			m.scrollHelp(max(1, m.layout().body-2))
+		case "pgup", "ctrl+u":
+			m.scrollHelp(-max(1, m.layout().body-2))
+		case "home", "g":
+			m.helpOffset = 0
+		case "end", "G":
+			m.scrollHelp(len(m.helpContent(m.width - 4)))
 		}
 		return nil
 	}
@@ -143,6 +156,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		return nil
 	case "?":
 		m.help = true
+		m.helpOffset = 0
 	case "esc":
 		if m.timeline {
 			m.timeline = false

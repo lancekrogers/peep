@@ -10,6 +10,15 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 	if m.filePrompt != nil || m.editing {
 		return nil
 	}
+	if m.help {
+		if msg.Button == tea.MouseButtonWheelDown {
+			m.scrollHelp(3)
+		}
+		if msg.Button == tea.MouseButtonWheelUp {
+			m.scrollHelp(-3)
+		}
+		return nil
+	}
 	if m.doc != nil && !m.help && (msg.Button == tea.MouseButtonWheelUp || msg.Button == tea.MouseButtonWheelDown) {
 		l := m.layout()
 		x := 1

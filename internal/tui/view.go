@@ -144,11 +144,6 @@ func (m *Model) previewRows(w, h int) []string {
 	}
 	return out
 }
-func (m *Model) helpRows(w, h int) []string {
-	rows := []string{"", "  BROWSE                              PLAYBACK", "  ↑ ↓ / j k  select                  Space / p   play / pause", "  Enter      open folder / play       s           stop and reset", "  Backspace  parent directory         [ / ]       rewind / forward " + m.seekLabel(), "  Esc        back / parent            { / }       rewind / forward 30s", "  /          filter                   t / Tab     focus timeline", "  H          hidden files             ← →         seek on timeline", "  f          focus preview            n / b       next / previous", "  v          now playing              z x c       slower / faster / reset", "  a          add to queue             - = m       volume / mute", "  Q          show queue               r           repeat", "", "  gg / G first / last · 12G jump · 5j / 5k move · # relative numbers", "  Ctrl+D / Ctrl+U half page · PgDn / PgUp page", "  S sort: n name / m modified / c created / s size / t type / r reverse", "  / filter: fuzzy text or globs (rec-*, *.txt, photo-??.jpg)", "  Files: e editor · Ctrl+R rename · M move · d/Delete confirm deletion", "  Documents: Enter/f read · j/k scroll in focus · PgUp/PgDn page · R source", "  In focused files: / or Ctrl+F find · n/N next/previous · Ctrl+U clear query", "  , changes the seek step: 1s / 5s / 10s / 30s / 60s.", "  F cycles video/GIF FPS: 1 / 6 / 12 / 24 / 30 / 60 (sent/target in native mode).", "  Click the timeline to seek. Click a transport button to control playback.", "  Selection previews silently. Transport controls the NOW PLAYING item.",
-		"  Graphics: cells use text blocks; native needs terminal graphics support.", "", "  ? / Esc close help     q / Ctrl+C quit"}
-	return rows
-}
 
 type transportButton struct{ label, key string }
 
@@ -164,9 +159,9 @@ func (m *Model) View() string {
 	w, h := m.width, m.height
 	if m.filePrompt != nil {
 		if m.filePrompt.operation == "delete" {
-			width := max(4, min(80, w-4))
+			width := max(4, min(72, w-4))
 			content := m.fileOperationRows(width-2, max(5, h-4))
-			pane := box("Delete?", content, width, min(h, len(content)+2), true)
+			pane := boxColor(m.deleteTitle(), content, width, min(h, len(content)+2), danger)
 			rows := make([]string, h)
 			top := max(0, (h-len(pane))/2)
 			for i := range rows {
@@ -221,7 +216,7 @@ func (m *Model) View() string {
 	if m.sortMenu {
 		add(color("s Size  t Type  r Reverse  Esc cancel", accent))
 	} else {
-		add(" " + color("‹ Backspace parent", accent) + "  " + render.Safe(m.dir))
+		add(" " + color("‹ Backspace parent", accent) + "  " + displayPath(m.dir))
 	}
 	if m.help {
 		for _, line := range box("Keyboard & mouse", m.helpRows(w-4, l.body), w-2, l.panelHeight, true) {
@@ -332,6 +327,9 @@ func (m *Model) View() string {
 			}
 		}
 	}
+	if m.help {
+		status = "Shortcuts apply to the focused pane"
+	}
 	add(" " + color(status, muted))
 	navigation := "↑↓ select   Enter open   Backspace parent   Esc back   / filter"
 	shortcuts := "f focus   B browser only   S sort   ? all controls"
@@ -340,6 +338,10 @@ func (m *Model) View() string {
 	}
 	if m.transportVisible() {
 		shortcuts = "f focus   B browser only   S sort   Q queue   t timeline   , seek step   { / } 30s   ? all controls"
+	}
+	if m.help {
+		navigation = "↑↓ / j k scroll   PgUp/PgDn page   Home/End jump"
+		shortcuts = "? / Esc close help   q / Ctrl+C quit"
 	}
 	add(" " + color(navigation, fg))
 	add(" " + color(shortcuts, muted))

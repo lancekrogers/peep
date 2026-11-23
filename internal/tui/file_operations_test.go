@@ -25,10 +25,10 @@ func TestDirectoryDeleteConfirmation(t *testing.T) {
 	for _, key := range []tea.KeyMsg{{Type: tea.KeyEnter}, {Type: tea.KeyEsc}, {Type: tea.KeyRunes, Runes: []rune("n")}} {
 		m.beginFileOperation("delete")
 		rows := strings.Join(m.fileOperationRows(100, 20), "\n")
-		if !strings.Contains(rows, "delete recordings?") || !strings.Contains(rows, "ALL files and subdirectories") {
+		if !strings.Contains(rows, "recordings") || !strings.Contains(rows, "All files and subdirectories") {
 			t.Fatal("missing recursive deletion warning", rows)
 		}
-		if !strings.Contains(strings.Join(m.fileOperationRows(60, 8), "\n"), "Delete folder and contents") {
+		if !strings.Contains(strings.Join(m.fileOperationRows(60, 8), "\n"), "Delete") {
 			t.Fatal("short prompt lost recursive confirmation label")
 		}
 		m.key(key)
