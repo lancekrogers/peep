@@ -42,6 +42,7 @@ type KittyWriter struct {
 	rect                      Placement
 	visible, uploaded, closed bool
 	imageID                   int
+	frameSlot                 int
 }
 
 func NewKittyWriter(out *os.File) *KittyWriter {
@@ -70,7 +71,11 @@ func (w *KittyWriter) schedule() {
 		})
 	}
 }
-func (w *KittyWriter) remove() string { return fmt.Sprintf("\x1b_Ga=d,d=I,i=%d,q=2\x1b\\", w.imageID) }
+
+// Document images use offsets 1..8. Reserve offset 32 for the second video
+// buffer, within this writer's 64-ID namespace.
+func (w *KittyWriter) frameID() int   { return w.imageID + w.frameSlot*32 }
+func (w *KittyWriter) remove() string { return w.deleteImage(w.frameID()) }
 func (w *KittyWriter) needsDraw() bool {
 	return w.imagesChanged() || (w.uploaded && (!w.visible || w.sent != w.key || w.drawn != w.rect)) || (w.visible && (!w.uploaded || w.sent != w.key || w.drawn != w.rect))
 }
@@ -92,14 +97,22 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 	uploadedFrame := false
 	var buf bytes.Buffer
 	buf.WriteString("\x1b[?2026h")
-	if w.uploaded && (!w.visible || w.sent != w.key) {
+	if w.uploaded && !w.visible {
 		buf.WriteString(w.remove())
 		w.uploaded = false
 	}
 	buf.Write(p)
 	if w.visible && !w.closed {
-		if !w.uploaded {
-			buf.WriteString(kittyUpload(w.png, w.imageID))
+		previousID := 0
+		if !w.uploaded || w.sent != w.key {
+			if w.uploaded {
+				previousID = w.frameID()
+				w.frameSlot = 1 - w.frameSlot
+			}
+			// Keep the previous placement alive throughout the upload. Deleting
+			// it first exposes a blank frame in terminals such as iTerm, even
+			// when the transfer is wrapped in synchronized output.
+			buf.WriteString(kittyUpload(w.png, w.frameID()))
 			w.uploaded = true
 			w.sent = w.key
 			uploadedFrame = true
@@ -107,7 +120,10 @@ func (w *KittyWriter) writeLocked(p []byte) (int, error) {
 		r := w.rect
 		w.drawn = r
 		// Save/restore cursor; C=1 prevents placement from advancing or scrolling it.
-		fmt.Fprintf(&buf, "\x1b7\x1b[%d;%dH\x1b_Ga=p,i=%d,p=1,c=%d,r=%d,C=1,z=1,q=2\x1b\\\x1b8", r.Y+1, r.X+1, w.imageID, r.Columns, r.Rows)
+		fmt.Fprintf(&buf, "\x1b7\x1b[%d;%dH\x1b_Ga=p,i=%d,p=1,c=%d,r=%d,C=1,z=1,q=2\x1b\\\x1b8", r.Y+1, r.X+1, w.frameID(), r.Columns, r.Rows)
+		if previousID != 0 {
+			buf.WriteString(w.deleteImage(previousID))
+		}
 	}
 	w.writeImages(&buf)
 	buf.WriteString("\x1b[?2026l")

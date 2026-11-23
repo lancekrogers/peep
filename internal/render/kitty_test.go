@@ -5,10 +5,96 @@ import (
 	"encoding/base64"
 	"io"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
+
+// Apply each graphics command individually, as a terminal receiving a slow
+// multipart transfer would. Synchronized output is deliberately not assumed.
+func TestKittyFrameHandoff(t *testing.T) {
+	for _, cleanup := range []string{"help", "document", "exit", "close"} {
+		t.Run(cleanup, func(t *testing.T) {
+			var out bytes.Buffer
+			w := &KittyWriter{out: &out, imageID: 128}
+			defer w.Close()
+			resident, displayed := map[int]bool{}, map[int]bool{}
+			commands := regexp.MustCompile("\x1b_G([^\x1b]*)\x1b\\\\")
+			consume := func(allowBlank bool) {
+				t.Helper()
+				pending := 0
+				for _, match := range commands.FindAllStringSubmatch(out.String(), -1) {
+					fields := map[string]string{}
+					for _, field := range strings.Split(strings.SplitN(match[1], ";", 2)[0], ",") {
+						key, value, _ := strings.Cut(field, "=")
+						fields[key] = value
+					}
+					id, _ := strconv.Atoi(fields["i"])
+					switch fields["a"] {
+					case "t", "":
+						if fields["a"] == "t" {
+							if displayed[id] {
+								t.Fatal("upload overwrites the displayed buffer")
+							}
+							pending = id
+						}
+						if fields["m"] == "0" {
+							resident[pending] = true
+						}
+					case "p":
+						if !resident[id] {
+							t.Fatal("placed an incomplete image")
+						}
+						displayed[id] = true
+					case "d":
+						delete(displayed, id)
+						delete(resident, id)
+					}
+					if !allowBlank && len(displayed) == 0 {
+						t.Fatal("blank interval between video frames")
+					}
+				}
+				out.Reset()
+			}
+			png := bytes.Repeat([]byte{1, 2, 3}, 5000)
+			for frame := 1; frame <= 6; frame++ {
+				w.Set(png, frame, Placement{Columns: 60 + frame, Rows: 20}, true)
+				if _, err := w.Write([]byte("text")); err != nil {
+					t.Fatal(err)
+				}
+				consume(frame == 1)
+				if len(resident) != 1 || len(displayed) != 1 {
+					t.Fatal("retired frames leaked")
+				}
+				for id := range resident {
+					if id != 128 && id != 160 {
+						t.Fatal("frame collided with document IDs")
+					}
+				}
+			}
+			switch cleanup {
+			case "help":
+				w.Set(nil, 7, Placement{}, false)
+				w.Write([]byte("help"))
+			case "document":
+				w.SetImages([]ImagePlacement{{PNG: png, Key: 1, Rect: Placement{Columns: 30, Rows: 10}}})
+				w.Write(nil)
+			case "exit":
+				w.Write([]byte("\x1b[?1049l"))
+			case "close":
+				w.Close()
+			}
+			consume(true)
+			if resident[128] || resident[160] {
+				t.Fatal("video frame survived cleanup")
+			}
+			if cleanup == "document" && !displayed[129] {
+				t.Fatal("document did not replace video")
+			}
+		})
+	}
+}
 
 func TestRendererSelection(t *testing.T) {
 	for _, tt := range []struct{ request, want string }{{"auto", "cells"}, {"cells", "cells"}, {"kitty", "kitty"}} {
