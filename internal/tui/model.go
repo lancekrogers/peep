@@ -88,6 +88,7 @@ type Model struct {
 	sortDescending, sortExplicit, sortMenu    bool
 	browserOnly                               bool
 	cursor, width, height                     int
+	helpOffset                                int
 	hidden, filtering, focus, help, showQueue bool
 	filter, notice, state                     string
 	history                                   map[string]string
