@@ -3,7 +3,6 @@ package tui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
-	"path/filepath"
 )
 
 func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
@@ -40,7 +39,7 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 	}
 	x, y := msg.X, msg.Y
 	if y == 1 && x < 22 {
-		return m.navigate(filepath.Dir(m.dir))
+		return m.parent()
 	}
 	if m.transportVisible() && y == m.height-5 {
 		m.timeline = true

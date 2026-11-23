@@ -47,7 +47,11 @@ func (m *Model) beginFileOperation(operation string) tea.Cmd {
 		// Editors need real terminal descriptors. Passing the graphics/probe
 		// wrappers makes os/exec create pipes (and a stdin copy goroutine that
 		// can remain blocked after the editor exits).
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		input := m.terminalInput
+		if input == nil {
+			input = os.Stdin
+		}
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = input, os.Stdout, os.Stderr
 		m.editing = true
 		m.syncGraphics()
 		return tea.ExecProcess(cmd, func(err error) tea.Msg { return editorDoneMsg{err} })
@@ -66,7 +70,7 @@ func (m *Model) beginFileOperation(operation string) tea.Cmd {
 	}
 	m.filePrompt = &filePrompt{operation: operation, target: target}
 	if operation == "rename" {
-		m.filePrompt.input = e.Name
+		m.filePrompt.input = filepath.Base(e.Path)
 	}
 	return nil
 }
@@ -186,6 +190,14 @@ func (m *Model) applyFileOperation(msg fileOperationMsg) tea.Cmd {
 		}
 	}
 	m.queue = next
+	results := m.resultPaths[:0]
+	for _, path := range m.resultPaths {
+		if path = remap(path); path != "" {
+			results = append(results, path)
+		}
+	}
+	m.resultPaths = results
+	m.resultSelected = remap(m.resultSelected)
 	m.index = newIndex
 	m.queueCursor = max(0, min(m.queueCursor, len(next)-1))
 	m.active.Path = remap(m.active.Path)

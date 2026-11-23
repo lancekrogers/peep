@@ -49,9 +49,10 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv ripgrep
       - run: go build -o bin/peep ./cmd/peep
       - run: python3 scripts/video-playback-smoke.py
+      - run: python3 scripts/stdin-smoke.py
       - run: bash scripts/fixtures.sh && python3 scripts/iterm-preview-smoke.py
       - uses: actions/upload-artifact@v4
         if: failure()

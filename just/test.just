@@ -6,6 +6,10 @@ test:
 test-install: build
     python3 scripts/install-smoke.py
 
+# Piped rg results, NUL filenames, keyboard input, and editor handoff in a PTY.
+test-stdin: build
+    python3 scripts/stdin-smoke.py
+
 # Formatting, static analysis, unit tests, and build.
 check:
     test -z "$(gofmt -l cmd internal)"

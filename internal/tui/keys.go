@@ -171,7 +171,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 			m.filter = ""
 			return m.refilter()
 		} else {
-			return m.navigate(filepath.Dir(m.dir))
+			return m.parent()
 		}
 		return m.resizeFrame()
 	case "f":
@@ -202,6 +202,10 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		m.timeline = false
 		return m.resizeFrame()
 	case "H":
+		if m.resultsMode {
+			m.notice = "Piped results include all supplied paths, including hidden files"
+			return nil
+		}
 		m.hidden = !m.hidden
 		return m.readDir()
 	case "j", "down", "k", "up":
@@ -223,7 +227,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		return m.previewSelection()
 	case "h", "left", "backspace":
-		return m.navigate(filepath.Dir(m.dir))
+		return m.parent()
 	case "l", "right":
 		if e := m.selected(); e != nil && e.Dir {
 			return m.navigate(e.Path)
@@ -369,6 +373,14 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	return nil
 }
 func (m *Model) navigate(dir string) tea.Cmd {
+	if m.resultRoot != "" && dir == filepath.Dir(m.resultRoot) && m.dir == m.resultRoot {
+		return m.parent()
+	}
+	if m.resultsMode {
+		m.resultSelected = dir
+		m.resultRoot = dir
+		m.resultsMode = false
+	}
 	m.focus = false
 	m.showQueue = false
 	m.timeline = false
