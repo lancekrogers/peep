@@ -3,8 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: New stable version, without v (releases the selected main commit)
-        required: true
+        description: patch (default), minor, major, or an explicit stable version
+        required: false
+        default: patch
         type: string
   push:
     tags: ['v*']
@@ -25,12 +26,30 @@ jobs:
           VERSION: ${{ inputs.version }}
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           if [[ "$EVENT" == workflow_dispatch ]]; then
             [[ "$REF" == refs/heads/main ]] || { echo 'Release from main only.' >&2; exit 1; }
+            VERSION="${VERSION:-patch}"
+            case "$VERSION" in
+              patch|minor|major)
+                latest=$(gh api --paginate "repos/$GH_REPO/tags" --jq '.[].name' |
+                  sed -nE 's/^v((0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*))$/\1/p' |
+                  sort -t . -k1,1n -k2,2n -k3,3n | tail -n 1)
+                IFS=. read -r major minor patch <<< "${latest:-0.0.0}"
+                case "$VERSION" in
+                  patch) patch=$((patch + 1)) ;;
+                  minor) minor=$((minor + 1)); patch=0 ;;
+                  major) major=$((major + 1)); minor=0; patch=0 ;;
+                esac
+                VERSION="$major.$minor.$patch"
+                ;;
+            esac
             TAG="v$VERSION"
           fi
           [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          echo "Releasing $TAG"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
   build:
     needs: version

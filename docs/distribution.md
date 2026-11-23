@@ -73,10 +73,18 @@ the publishing workflow. Application changes still go through normal PR review.
 After merging the changes to release, run from the repository:
 
 ```sh
-just release 0.2.1
+just release          # next patch: 0.2.0 -> 0.2.1
+just release minor    # next minor: 0.2.0 -> 0.3.0
+just release major    # next major: 0.2.0 -> 1.0.0
 ```
 
-Use a new stable version each time. This dispatches CI against remote `main`,
+CI chooses the next version from the highest stable GitHub tag, including tags
+beyond the first API page. Prerelease and demo tags are ignored. Minor and major
+bumps reset the lower components; with no stable tags, patch starts at `0.0.1`.
+Release runs are serialized so version selection happens in CI, not on your
+machine. An explicit version is still available with `just release 0.2.1`.
+
+This dispatches CI against remote `main`,
 not your local working copy. GitHub CLI authentication is required locally;
 no local npm login, npm confirmation, or manual SSH step is needed per release.
 The workflow:

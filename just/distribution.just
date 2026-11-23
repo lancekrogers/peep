@@ -1,5 +1,5 @@
 # Release remote main through CI and publish all three package channels.
-release version:
+release version="patch":
     @gh workflow run release.yml --repo lancekrogers/peep --ref main -f version={{quote(version)}}
 
 # Generate all package-manager inputs from the four versioned archives.
