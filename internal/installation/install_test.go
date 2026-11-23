@@ -1,13 +1,78 @@
 package installation
 
 import (
+	"bufio"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 )
+
+func TestInstallRunningExecutable(t *testing.T) {
+	if os.Getenv("PEEP_INSTALL_TEST_CHILD") == "1" {
+		fmt.Println("ready")
+		_, _ = io.Copy(io.Discard, os.Stdin)
+		return
+	}
+	dir := t.TempDir()
+	bin := filepath.Join(dir, "bin")
+	if err := os.MkdirAll(bin, 0755); err != nil {
+		t.Fatal(err)
+	}
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(self)
+	if err != nil {
+		t.Fatal(err)
+	}
+	public := filepath.Join(bin, "peep")
+	if err := os.WriteFile(public, data, 0755); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, public, "-test.run=^TestInstallRunningExecutable$")
+	cmd.Env = append(os.Environ(), "PEEP_INSTALL_TEST_CHILD=1")
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = in.Close()
+		if err := cmd.Wait(); err != nil {
+			t.Error("old executable failed after upgrade:", err)
+		}
+	}()
+	if line, err := bufio.NewReader(out).ReadString('\n'); err != nil || line != "ready\n" {
+		t.Fatalf("child startup: %q %v", line, err)
+	}
+	source := filepath.Join(dir, "new")
+	if err := os.WriteFile(source, []byte("replacement"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := InstallTo(ctx, source, filepath.Join(dir, "prefix"), bin); err != nil {
+		t.Fatal("could not replace a running executable:", err)
+	}
+	data, err = os.ReadFile(public)
+	if err != nil || string(data) != "replacement" {
+		t.Fatalf("replacement missing: %s %v", data, err)
+	}
+}
 
 func TestInstallUpgradeAndFailurePreservation(t *testing.T) {
 	dir := t.TempDir()
@@ -80,6 +145,53 @@ func TestFailedActivationPreservesDestination(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(public, "keep")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestInstallReplacesLegacyExecutableWithoutFollowingLinks(t *testing.T) {
+	for _, symlink := range []bool{false, true} {
+		t.Run(fmt.Sprint("symlink=", symlink), func(t *testing.T) {
+			dir := t.TempDir()
+			source := filepath.Join(dir, "new")
+			old := filepath.Join(dir, "old")
+			bin := filepath.Join(dir, "custom go executables")
+			public := filepath.Join(bin, "peep")
+			for path, content := range map[string]string{source: "new", old: "old"} {
+				if err := os.WriteFile(path, []byte(content), 0755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.MkdirAll(bin, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if symlink {
+				if err := os.Symlink(old, public); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(public, []byte("old"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			opened, err := os.Open(public)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer opened.Close()
+			if got, err := InstallTo(context.Background(), source, filepath.Join(dir, "prefix"), bin); err != nil || got != public {
+				t.Fatalf("install: %q %v", got, err)
+			}
+			data, err := os.ReadFile(public)
+			if err != nil || string(data) != "new" {
+				t.Fatalf("old command not replaced: %s %v", data, err)
+			}
+			data, err = io.ReadAll(opened)
+			if err != nil || string(data) != "old" {
+				t.Fatalf("open old executable changed: %s %v", data, err)
+			}
+			data, err = os.ReadFile(old)
+			if err != nil || string(data) != "old" {
+				t.Fatalf("symlink target changed: %s %v", data, err)
+			}
+		})
 	}
 }
 func TestDependencyPlans(t *testing.T) {

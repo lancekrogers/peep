@@ -2,6 +2,10 @@
 test:
     go test -race ./...
 
+# Source upgrades from legacy Go-bin installs, with isolated homes and PATHs.
+test-install: build
+    python3 scripts/install-smoke.py
+
 # Formatting, static analysis, unit tests, and build.
 check:
     test -z "$(gofmt -l cmd internal)"

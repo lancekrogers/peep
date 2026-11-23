@@ -63,13 +63,14 @@ peep --doctor     # Check media dependencies and terminal support
 <summary>Install from source</summary>
 
 Requires **Go 1.27+** and **just**. `just install` sets up missing media tools
-through your supported package manager.
+through your supported package manager and upgrades an active legacy Go-bin copy.
+Follow the installer's PATH guidance if needed.
 
 ```sh
 git clone https://github.com/lancekrogers/peep.git
 cd peep
 just install
-~/.local/bin/peep
+peep
 ```
 
 </details>

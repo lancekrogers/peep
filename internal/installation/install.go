@@ -14,7 +14,20 @@ import (
 // Install verifies a staged copy before atomically replacing the public symlink.
 // Previous versions remain usable by running peep processes and their workers.
 func Install(ctx context.Context, source, prefix string) (string, error) {
+	return InstallTo(ctx, source, prefix, "")
+}
+
+// InstallTo optionally places the public executable in a separate bin directory.
+// This preserves legacy Go install locations while keeping versioned storage.
+func InstallTo(ctx context.Context, source, prefix, bin string) (string, error) {
 	prefix, err := filepath.Abs(prefix)
+	if err != nil {
+		return "", err
+	}
+	if bin == "" {
+		bin = filepath.Join(prefix, "bin")
+	}
+	bin, err = filepath.Abs(bin)
 	if err != nil {
 		return "", err
 	}
@@ -70,7 +83,6 @@ func Install(ctx context.Context, source, prefix string) (string, error) {
 	} else if err = verify(ctx, filepath.Join(target, "peep"), sum); err != nil {
 		return "", fmt.Errorf("existing version damaged: %w", err)
 	}
-	bin := filepath.Join(prefix, "bin")
 	if err = os.MkdirAll(bin, 0755); err != nil {
 		return "", err
 	}

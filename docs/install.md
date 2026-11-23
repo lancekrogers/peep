@@ -55,7 +55,7 @@ its SHA-256 against `checksums.txt`. From the extracted archive:
 
 The installer uses Homebrew on macOS or apt-get/dnf/pacman on Linux for missing FFmpeg/mpv tools. It may request sudo through the package manager. If the manager or packages are unavailable, installation reports the failure before replacing peep. `--no-deps` still supports documents and Mermaid diagrams; media features require their tools.
 
-Installation stages and verifies a versioned executable, then atomically updates `<prefix>/bin/peep`. Old versions remain available to running processes. Use the same command for upgrades. Add `<prefix>/bin` to PATH and check `command -v peep` if an older Go-bin installation takes precedence.
+Installation stages and verifies a versioned executable, then atomically updates `<prefix>/bin/peep`. Old versions remain available to running processes. Use the same command for upgrades. `--bin-dir /your/bin` overrides the public executable directory while keeping versioned storage under the prefix. The installer reports which executable PATH selects and warns if another copy takes precedence.
 
 ## Build from source
 
@@ -63,7 +63,7 @@ Building from source requires **Go 1.27+** and `just`:
 
 ```sh
 just build                         # includes Mermaid automatically
-just install                       # installs into ~/.local with media setup
+just install                       # installs with media setup; upgrades an active Go-bin copy
 just package                       # archive + SHA-256 file for the current host
 just package-all                   # macOS/Linux × arm64/amd64 archives
 ./bin/peep ~/Pictures
@@ -76,6 +76,8 @@ just package-all                   # macOS/Linux × arm64/amd64 archives
 ```
 
 Package archives contain one executable, README, documentation, the Night Shift demo collection, the MIT license, and renderer notices. Open the included collection with `./bin/peep examples/night-shift/00-start-here.md`; the `just demo` recipe is available in source checkouts. `--licenses` displays those notices from the executable itself. CI builds host packages and checks installation/rendering without a helper or language toolchain on PATH; publishing a release is a separate action.
+
+`just install` defaults to `~/.local/bin/peep`. If PATH selects an older copy in Go's configured bin directory (`go env GOBIN`, or the first GOPATH entry's `bin` directory), it replaces that entry atomically. This also works while the old executable is running on Linux; no manual deletion is needed. Other installation locations are left alone and reported if they shadow the new binary. Upgrade package-managed copies through their package manager. After changing PATH or removing an old copy, use `hash -r` in Bash or `rehash` in Zsh, then `type -a peep` to check your shell's selection.
 
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 
