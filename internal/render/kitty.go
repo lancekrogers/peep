@@ -137,7 +137,10 @@ func kittyUpload(png []byte, id int) string {
 		if offset == 0 {
 			fmt.Fprintf(&b, "\x1b_Ga=t,f=100,t=d,i=%d,q=2,m=%d;", id, more)
 		} else {
-			fmt.Fprintf(&b, "\x1b_Gm=%d;", more)
+			// iTerm evaluates reply verbosity on the final chunk rather than
+			// inheriting it from the first. Keep every chunk quiet so its ACK
+			// cannot reach the TUI as keystrokes and restart the preview.
+			fmt.Fprintf(&b, "\x1b_Gm=%d,q=2;", more)
 		}
 		b.WriteString(data[offset:end])
 		b.WriteString("\x1b\\")
