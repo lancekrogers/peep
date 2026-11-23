@@ -57,38 +57,59 @@ personal GitHub repository. The existing AUR maintainer account is `obediencecor
    token. The workflow uses Node 24 with its bundled modern npm.
 4. In GitHub's `distribution` environment, add `HOMEBREW_TAP_TOKEN` with contents
    and pull-request write access to `lancekrogers/homebrew-tap`.
-5. Use the existing AUR account `obediencecorp` and register a dedicated
-   publishing SSH key with write access to `peep-tui-bin`.
+5. Use an SSH key registered to the existing AUR account `obediencecorp`
+   with write access to `peep-tui-bin`. The existing AUR key can be reused.
    Add environment secrets `AUR_SSH_KEY`, `AUR_EMAIL`, and `AUR_KNOWN_HOSTS`.
    Verify the AUR SSH host fingerprint through Arch's published information
    before storing its known-hosts entry. The workflow never accepts a new host
    key automatically.
 
 The existing personal Homebrew tap is used; no Homebrew/core submission is
-needed. Its formula update is opened as a pull request for review.
+needed. Generated formula updates are opened as pull requests and merged by
+the publishing workflow. Application changes still go through normal PR review.
 
 ## Release
 
-Merge the packaging PR first. Tag the intended main commit with a new `vX.Y.Z`
-tag and push that tag. The release workflow:
+After merging the changes to release, run from the repository:
+
+```sh
+just release 0.2.1
+```
+
+Use a new stable version each time. This dispatches CI against remote `main`,
+not your local working copy. GitHub CLI authentication is required locally;
+no local npm login, npm confirmation, or manual SSH step is needed per release.
+The workflow:
 
 1. Builds all four archives and generates every channel from those archives.
-2. Tests npm installation and embedded Mermaid on Linux and macOS.
-3. Publishes the archives, npm tarballs, formula, AUR metadata, and a combined
-   `checksums.txt` to the GitHub release.
+2. Tests npm installation and embedded Mermaid on Linux and macOS, and the Arch package.
+3. Tags the exact main commit tested, without moving an existing version tag.
+4. Publishes the archives, npm tarballs, formula, AUR metadata, and checksums.
+5. Starts **publish packages** using the saved credentials and npm trusted publishing.
+   npm publishes the native packages before the launcher; Homebrew creates and
+   merges the generated formula PR; AUR pushes the recipe and matching `.SRCINFO`.
 
-Run **publish packages** manually for that release version, selecting one
-channel or all three. Every job downloads and verifies the release assets.
-Homebrew opens a tap PR, npm publishes native packages before the launcher,
-and AUR pushes the recipe and matching `.SRCINFO`.
+The command starts the release; it does not wait for completion. Follow **release**
+and then **publish packages** in [Actions](https://github.com/lancekrogers/peep/actions).
+A green release build alone does not mean every package channel has finished.
+A manually pushed stable version tag also runs this build-and-publish flow.
 
-Merge the tap PR, then test fresh installations through each public channel
-and run `peep --version` and `peep --doctor`. npm installations need FFmpeg/mpv
-installed separately; see [installation](install.md).
+If building fails, rerun the failed jobs. If a publishing channel fails after the
+GitHub release exists, retry it without rebuilding or creating another version:
 
-Rerunning a channel for the same version is safe: Homebrew reuses an existing
-update branch/PR or recognizes a merged formula; AUR skips an identical recipe;
-npm checks published tarball integrity before skipping it.
+```sh
+gh workflow run publish.yml --repo lancekrogers/peep --ref main \
+  -f version=0.2.1 -f channel=all
+```
+
+Use `npm`, `homebrew`, or `aur` instead of `all` to retry one channel. A blocked tap
+merge fails visibly rather than bypassing repository protections. Credentials
+only need attention if revoked or expired; npm trusted publishers must remain
+configured for `publish.yml` and the `distribution` environment.
+
+After the first automated release, verify fresh public installs with
+`peep --version` and `peep --doctor`. npm installations need FFmpeg/mpv installed
+separately; see [installation](install.md).
 
 Published versions are immutable. If a channel fails, resolve its credential
 or package issue and rerun that channel. If npm publication stopped halfway,

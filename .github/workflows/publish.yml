@@ -51,7 +51,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-      - name: Open tap update pull request
+      - name: Update Homebrew tap
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           VERSION: ${{ inputs.version }}
@@ -82,9 +82,11 @@ jobs:
           existing=$(gh pr list --repo lancekrogers/homebrew-tap --head "$branch" --state open --json url --jq '.[0].url // empty')
           if test -n "$existing"; then
             echo "Homebrew update already has a pull request: $existing"
-            exit 0
+          else
+            existing=$(gh pr create --repo lancekrogers/homebrew-tap --head "peep-$VERSION" --title "peep $VERSION" --body "Install peep $VERSION from verified release archives. Includes embedded Mermaid and media dependencies.")
           fi
-          gh pr create --repo lancekrogers/homebrew-tap --head "peep-$VERSION" --title "peep $VERSION" --body "Install peep $VERSION from verified release archives. Includes embedded Mermaid and media dependencies."
+          # Only the generated formula is updated; retain the PR as release history.
+          gh pr merge "$existing" --repo lancekrogers/homebrew-tap --squash --delete-branch
   aur:
     if: inputs.channel == 'all' || inputs.channel == 'aur'
     runs-on: ubuntu-latest

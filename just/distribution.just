@@ -1,3 +1,7 @@
+# Release remote main through CI and publish all three package channels.
+release version:
+    @gh workflow run release.yml --repo lancekrogers/peep --ref main -f version={{quote(version)}}
+
 # Generate all package-manager inputs from the four versioned archives.
 distribution version: (package-all version)
     go run ./cmd/peep-release --version '{{version}}'
@@ -7,6 +11,7 @@ distribution version: (package-all version)
 test-distribution:
     node --test scripts/npm-launcher.test.cjs scripts/npm-publish.test.cjs
     python3 scripts/publish-retry-smoke.py
+    python3 scripts/release-workflow-smoke.py
     node scripts/npm-install-smoke.cjs dist/distribution
 
 # Validate .SRCINFO, build and install the AUR package in disposable Arch Linux.
