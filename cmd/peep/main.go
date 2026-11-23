@@ -34,6 +34,7 @@ func run() error {
 	doctor := flags.Bool("doctor", false, "report media dependencies")
 	install := flags.Bool("install", false, "install this executable and missing media dependencies")
 	prefix := flags.String("prefix", "", "installation prefix (default ~/.local)")
+	binDir := flags.String("bin-dir", "", "install executable in this directory (default <prefix>/bin)")
 	noDeps := flags.Bool("no-deps", false, "skip media dependency setup during --install")
 	licenses := flags.Bool("licenses", false, "show embedded Mermaid license and third-party notices")
 	showVersion := flags.Bool("version", false, "show version")
@@ -75,11 +76,12 @@ func run() error {
 				return err
 			}
 		}
-		path, err := installation.Install(ctx, executable, destination)
+		path, err := installation.InstallTo(ctx, executable, destination, *binDir)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("Installed %s\nAdd %s to PATH if needed.\n", path, filepath.Dir(path))
+		fmt.Printf("Installed %s\n", path)
+		installation.ReportPath(os.Stdout, path)
 		return nil
 	}
 	if *licenses {

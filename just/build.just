@@ -3,9 +3,9 @@ build:
     mkdir -p bin
     go build -trimpath -o bin/peep ./cmd/peep
 
-# Install peep and any missing media dependencies (default ~/.local).
+# Install peep, upgrading an active legacy Go-bin copy when present.
 install: build
-    ./bin/peep --install
+    bash scripts/install.sh
 
 # Compile the supported OS/architecture combinations.
 build-all:

@@ -32,6 +32,8 @@ jobs:
           python-version: '3.12'
       - run: go run ./cmd/peep-package
       - run: python3 scripts/package-smoke.py
+      - run: go build -o bin/peep ./cmd/peep
+      - run: python3 scripts/install-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: peep-${{ matrix.runner }}
