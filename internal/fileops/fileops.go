@@ -46,13 +46,18 @@ func (t Target) validate(ctx context.Context) error {
 	return nil
 }
 
-// Delete removes a file, a symlink itself, or an empty directory. It never recurses.
+// Delete removes a confirmed target, including all contents of a directory.
+// Symlinks are removed themselves, without following their targets.
 func Delete(ctx context.Context, t Target) error {
 	if err := t.validate(ctx); err != nil {
 		return err
 	}
-	if err := os.Remove(t.Path); err != nil {
-		return fmt.Errorf("delete (directories must be empty): %w", err)
+	remove := os.Remove
+	if t.Info.IsDir() {
+		remove = os.RemoveAll
+	}
+	if err := remove(t.Path); err != nil {
+		return fmt.Errorf("delete: %w", err)
 	}
 	return nil
 }

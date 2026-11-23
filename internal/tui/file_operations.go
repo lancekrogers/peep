@@ -136,7 +136,13 @@ func (m *Model) fileOperationRows(w, h int) []string {
 	}
 	if p.operation == "delete" {
 		heading = "Are you sure you want to delete " + render.Safe(filepath.Base(p.target.Path)) + "?"
-		detail = render.Safe(p.target.Path) + "\n\nPermanent deletion. Folders must be empty."
+		detail = "Permanent deletion. This cannot be undone."
+		if p.target.Info.IsDir() {
+			detail = "Permanently deletes this folder and ALL files and subdirectories inside it. This cannot be undone."
+		} else if p.target.Info.Mode()&os.ModeSymlink != 0 {
+			detail = "Deletes only this symlink. Its target will not be deleted."
+		}
+		detail += "\n\n" + render.Safe(p.target.Path)
 	}
 	var wrapped []string
 	for _, row := range []string{heading, "", detail} {
@@ -151,7 +157,11 @@ func (m *Model) fileOperationRows(w, h int) []string {
 		problem = "Working…"
 	}
 	if p.operation == "delete" {
-		return append(wrapped, "", color(problem, accent), color("y Yes, delete", accent)+"    n / Enter / Esc Cancel")
+		confirm := "y Yes, delete"
+		if p.target.Info.IsDir() {
+			confirm = "y Delete folder and contents"
+		}
+		return append(wrapped, "", color(problem, accent), color(confirm, accent)+"    n / Enter / Esc Cancel")
 	}
 	wrapped = append(wrapped, color("> "+render.Safe(p.input)+"▏", fg), color(problem, accent), "Enter confirm · Esc cancel · Ctrl+U clear")
 	return wrapped

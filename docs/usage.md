@@ -63,7 +63,7 @@ Timelines always control the file named **NOW PLAYING**, even when the preview s
 
 Rename, move and delete operate on the selected browser entry; the parent entry is protected. Escape cancels a prompt. Rename accepts a filename; move accepts an existing folder or full path, relative to the current directory, absolute, or beginning with `~/`. Existing destinations (including dangling symlinks) are never overwritten. Moves are atomic within one filesystem; cross-filesystem moves are rejected.
 
-Deletion is permanent. The confirmation shows the target: `y` confirms; `n`, Enter, or Escape cancels. It removes files, symlinks themselves, and empty folders; non-empty folders are refused. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
+Deletion is permanent. The confirmation shows the target: `y` confirms; `n`, Enter, or Escape cancels. Deleting a folder also deletes all files and subdirectories inside it; the confirmation explicitly warns about this. Symlinks themselves are removed without deleting their targets. Stop playback before modifying the active file or a containing directory. Queued paths are updated after moves and removed after deletion. In the queue, `d` still removes only a queue entry.
 
 The editor command supports quoted paths and arguments, without shell expansion. The file path is passed as a separate absolute argument. For graphical editors, configure their wait flag (for example `EDITOR="code --wait"`). Peep releases the terminal while the editor runs and refreshes the listing and preview on return.
 

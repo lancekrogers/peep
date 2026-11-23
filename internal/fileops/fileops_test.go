@@ -79,18 +79,86 @@ func TestDeleteAndChangedTarget(t *testing.T) {
 	if _, err := os.Stat(target.Path); err != nil {
 		t.Fatal("followed symlink")
 	}
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, "child"), []byte("keep"), 0600)
-	dt, _ := Capture(dir)
-	if err := Delete(context.Background(), dt); err == nil {
-		t.Fatal("deleted nonempty directory")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "child")); err != nil {
-		t.Fatal("child lost")
-	}
-	os.Remove(filepath.Join(dir, "child"))
-	if err := Delete(context.Background(), dt); err != nil {
+}
+
+func TestDeleteDirectoryContentsAndSymlinks(t *testing.T) {
+	outside := fixture(t, "keep.txt", "keep")
+	dir := filepath.Join(t.TempDir(), "tree")
+	if err := os.MkdirAll(filepath.Join(dir, "nested", "empty"), 0700); err != nil {
 		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "nested", "child"), []byte("delete"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for name, dest := range map[string]string{"file-link": outside.Path, "folder-link": filepath.Dir(outside.Path), "dangling": "missing"} {
+		if err := os.Symlink(dest, filepath.Join(dir, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	target, err := Capture(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := Delete(ctx, target); err == nil {
+		t.Fatal("ignored cancellation")
+	}
+	if _, err := os.Stat(filepath.Join(dir, "nested", "child")); err != nil {
+		t.Fatal("cancel deleted contents", err)
+	}
+	// Deleting a directory symlink must not delete its contents either.
+	link := filepath.Join(t.TempDir(), "tree-link")
+	if err := os.Symlink(dir, link); err != nil {
+		t.Fatal(err)
+	}
+	linkTarget, err := Capture(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(context.Background(), linkTarget); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(link); !os.IsNotExist(err) {
+		t.Fatal("symlink retained")
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatal("followed directory symlink", err)
+	}
+	if err := Delete(context.Background(), target); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Fatal("directory retained", err)
+	}
+	if content, err := os.ReadFile(outside.Path); err != nil || string(content) != "keep" {
+		t.Fatal("deleted a symlink target outside the directory", err)
+	}
+}
+
+func TestDeleteRejectsReplacedDirectory(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "tree")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	target, err := Capture(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(dir, dir+"-old"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := Delete(context.Background(), target); err == nil {
+		t.Fatal("deleted replacement directory")
+	}
+	if _, err := os.Stat(dir); err != nil {
+		t.Fatal("replacement lost", err)
+	}
+	if _, err := Capture(string(filepath.Separator)); err == nil {
+		t.Fatal("accepted filesystem root")
 	}
 }
 func TestDestinationAndEditor(t *testing.T) {
