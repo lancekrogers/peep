@@ -9,6 +9,7 @@ import tempfile
 root = Path(__file__).resolve().parent.parent
 binary = root / 'bin/peep'
 expected = hashlib.sha256(binary.read_bytes()).digest()
+built_version = subprocess.check_output([str(binary), '--version'], text=True)
 
 with tempfile.TemporaryDirectory(prefix='peep-install-') as tmp:
     for case in ('gopath', 'gobin', 'fresh', 'conflict'):
@@ -46,8 +47,7 @@ with tempfile.TemporaryDirectory(prefix='peep-install-') as tmp:
             assert str(old) in result.stdout
             assert not old.is_symlink()
         else:
-            assert 'old-version' not in command.stdout
-            assert command.stdout.startswith('peep '), command.stdout
+            assert command.stdout == built_version, command.stdout
             assert 'PATH selects the installed executable:' in result.stdout
         # Re-running an upgrade must work with the new symlink already active.
         subprocess.run(['/bin/bash', 'scripts/install.sh', '--no-deps'], cwd=root,

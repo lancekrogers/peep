@@ -79,6 +79,12 @@ Package archives contain one executable, README, documentation, the Night Shift 
 
 `just install` defaults to `~/.local/bin/peep`. If PATH selects an older copy in Go's configured bin directory (`go env GOBIN`, or the first GOPATH entry's `bin` directory), it replaces that entry atomically. This also works while the old executable is running on Linux; no manual deletion is needed. Other installation locations are left alone and reported if they shadow the new binary. Upgrade package-managed copies through their package manager. After changing PATH or removing an old copy, use `hash -r` in Bash or `rehash` in Zsh, then `type -a peep` to check your shell's selection.
 
+Source builds report their embedded Git revision with `peep --version` and
+`peep --doctor`, for example `peep dev (0123456789ab)`. `dirty` means the checkout
+had uncommitted changes when built. Compare the revision with `git rev-parse
+--short=12 HEAD` in your source checkout. Release packages report their release
+version. Building from source does not create a new release.
+
 On Linux, install FFmpeg and mpv through your distribution's package manager. Audio plays on the machine running peep. Remote audio forwarding is not provided.
 
 Without `--play`, startup is silent. Opening a directory lists files and folders. Text and Markdown files have scrollable previews; binary and special files show an unavailable-preview message. Enter on a file snapshots the visible media into a queue and starts at that file. Filtering or navigating afterward does not alter playback. Browsing and playback never modify files. Explicit file operations are available from the browser.

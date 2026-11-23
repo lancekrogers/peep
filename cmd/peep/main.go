@@ -21,7 +21,8 @@ import (
 	"github.com/lancekrogers/peep/internal/tui"
 )
 
-var version = "0.2.0-dev"
+// Release packaging overrides this with -X main.version=<release>.
+var version = "dev"
 
 func run() error {
 	if len(os.Args) == 2 && os.Args[1] == diagram.WorkerArgument {
@@ -89,7 +90,7 @@ func run() error {
 		return nil
 	}
 	if *showVersion {
-		fmt.Println("peep", version)
+		fmt.Println("peep", buildVersion())
 		return nil
 	}
 	mode, err := render.Renderer(*renderer)
@@ -101,7 +102,7 @@ func run() error {
 		if *renderer == "auto" && os.Getenv("TMUX") == "" && os.Getenv("STY") == "" {
 			mode = "auto (capability probe at startup)"
 		}
-		fmt.Println("peep", version, "· image/video renderer:", mode)
+		fmt.Println("peep", buildVersion(), "· image/video renderer:", mode)
 		for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
 			path, err := exec.LookPath(name)
 			if err != nil {

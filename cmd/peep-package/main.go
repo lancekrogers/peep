@@ -19,7 +19,7 @@ import (
 func run() error {
 	platform := flag.String("os", runtime.GOOS, "target OS")
 	arch := flag.String("arch", runtime.GOARCH, "target architecture")
-	version := flag.String("version", "0.2.0-dev", "package version")
+	version := flag.String("version", "dev", "package version")
 	output := flag.String("out", "dist", "output directory")
 	flag.Parse()
 	if (*platform != "linux" && *platform != "darwin") || (*arch != "arm64" && *arch != "amd64") {
