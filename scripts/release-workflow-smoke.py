@@ -21,6 +21,9 @@ a = sys.argv[1:]
 with open(os.environ['CALLS'], 'a') as f: f.write(json.dumps(a) + '\\n')
 if a[0] == 'api' and 'matching-refs' in a[1]:
  print(os.environ.get('EXISTING_SHA', ''))
+elif a[:2] == ['api', '--paginate']:
+ if os.environ.get('TAGS_ERROR'): sys.exit('tag API unavailable')
+ print(os.environ.get('TAGS', ''))
 ''')
     mock.chmod(0o755)
     env = dict(os.environ, PATH=str(root)+os.pathsep+os.environ['PATH'],
@@ -37,6 +40,14 @@ if a[0] == 'api' and 'matching-refs' in a[1]:
     execute(version)
     assert (root/'output').read_text() == 'version=1.2.3\n'
     execute(version, {'REF': 'refs/heads/topic'}, success=False)
+    tags = 'v0.2.0\nv0.9.9\nv0.10.2\nv0.10.1\ndemo-v1\nv9.0.0-rc.1\nv01.2.3'
+    for bump, expected in [('patch', '0.10.3'), ('minor', '0.11.0'), ('major', '1.0.0'), ('', '0.10.3')]:
+        execute(version, {'VERSION': bump, 'TAGS': tags})
+        assert (root/'output').read_text().endswith('version=' + expected + '\n')
+    execute(version, {'VERSION': 'patch', 'TAGS': ''})
+    assert (root/'output').read_text().endswith('version=0.0.1\n')
+    execute(version, {'VERSION': 'patch', 'TAGS_ERROR': '1'}, success=False)
+
     for invalid in ['v1.2.3', '1.2', '01.2.3', '1.2.3-rc.1', '1.2.3; touch nope']:
         execute(version, {'VERSION': invalid}, success=False)
     execute(version, {'EVENT': 'push', 'TAG': 'v2.3.4'})
