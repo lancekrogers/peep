@@ -188,6 +188,9 @@ func (m *Model) View() string {
 	lines := []string{}
 	add := func(s string) { lines = append(lines, fill(s, w, bg)) }
 	mode := "BROWSE"
+	if m.resultsMode {
+		mode = "RESULTS"
+	}
 	if m.focus {
 		mode = "PREVIEW"
 	}
@@ -214,9 +217,13 @@ func (m *Model) View() string {
 		add(" " + color("◉ peep", accent) + "  " + badge(mode) + color(m.navigationPrefix(), accent) + "  " + color(searchHint, fg) + "  " + color("? help · q quit", muted))
 	}
 	if m.sortMenu {
-		add(color("s Size  t Type  r Reverse  Esc cancel", accent))
+		hint := "s Size  t Type  r Reverse  Esc cancel"
+		if m.resultsMode {
+			hint = "s Size  t Type  r Reverse  i Input order  Esc cancel"
+		}
+		add(color(hint, accent))
 	} else {
-		add(" " + color("‹ Backspace parent", accent) + "  " + displayPath(m.dir))
+		add(" " + color(m.parentHint(), accent) + "  " + displayPath(m.dir))
 	}
 	if m.help {
 		for _, line := range box("Keyboard & mouse", m.helpRows(w-4, l.body), w-2, l.panelHeight, true) {
@@ -332,6 +339,11 @@ func (m *Model) View() string {
 	}
 	add(" " + color(status, muted))
 	navigation := "↑↓ select   Enter open   Backspace parent   Esc back   / filter"
+	if m.resultsMode {
+		navigation = "↑↓ select   Enter open   Esc back   / filter results"
+	} else if m.resultRoot != "" && m.dir == m.resultRoot {
+		navigation = "↑↓ select   Enter open   Backspace results   Esc back   / filter"
+	}
 	shortcuts := "f focus   B browser only   S sort   ? all controls"
 	if m.doc != nil && m.focus {
 		navigation = "↑↓ / j/k scroll   PgUp/PgDn page   Home/End jump   Esc back   / find"
@@ -349,6 +361,9 @@ func (m *Model) View() string {
 }
 
 func (m *Model) fileTitle() string {
+	if m.resultsMode && m.filter == "" {
+		return fmt.Sprintf("Results · %d · %s", len(m.entries), m.sortLabel())
+	}
 	if m.filter != "" {
 		return fmt.Sprintf("Matches · %d / %d · %s", len(m.entries), len(m.allEntries), m.sortLabel())
 	}

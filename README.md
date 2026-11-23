@@ -54,6 +54,7 @@ those tools separately through your system package manager. Mermaid is built in.
 peep              # Browse the current directory
 peep ~/Pictures   # Browse a directory (peep <path>)
 peep README.md     # Preview a file
+rg -l "TODO" | peep # Browse files matching a content search
 peep --doctor     # Check media dependencies and terminal support
 ```
 

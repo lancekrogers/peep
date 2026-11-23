@@ -9,6 +9,9 @@ func (m *Model) sortLabel() string {
 	if m.filter != "" && !browser.IsGlob(m.filter) && !m.sortExplicit {
 		return "Relevance"
 	}
+	if m.resultsMode && !m.sortExplicit {
+		return "Input order"
+	}
 	field := m.sortField
 	if field == "" {
 		field = browser.SortName
@@ -20,12 +23,22 @@ func (m *Model) sortLabel() string {
 	return string(field) + direction
 }
 func (m *Model) sortEntries() {
+	if m.resultsMode && !m.sortExplicit {
+		return
+	}
 	if m.filter == "" || browser.IsGlob(m.filter) || m.sortExplicit {
 		browser.Sort(m.entries, m.sortField, m.sortDescending)
 	}
 }
 func (m *Model) sortKey(key string) tea.Cmd {
 	switch key {
+	case "i":
+		if m.resultsMode {
+			m.sortExplicit, m.sortDescending, m.sortMenu = false, false, false
+			m.sortField = ""
+			return m.refilter()
+		}
+		return nil
 	case "esc", "S", "enter":
 		m.sortMenu = false
 		return nil

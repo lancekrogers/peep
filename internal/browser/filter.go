@@ -16,6 +16,10 @@ func Filter(entries []Entry, query string) []Entry {
 			if err != nil {
 				return nil
 			}
+			if !matched && entry.Path != "" {
+				// Results may display relative paths, but *.txt still matches a basename.
+				matched, _ = filepath.Match(strings.ToLower(query), strings.ToLower(filepath.Base(entry.Path)))
+			}
 			if matched {
 				out = append(out, entry)
 			}

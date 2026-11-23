@@ -47,6 +47,10 @@ type controlMsg struct {
 }
 
 type Model struct {
+	terminalInput                             *os.File
+	resultsMode                               bool
+	resultPaths                               []string
+	resultBase, resultRoot, resultSelected    string
 	targetFPS                                 int
 	videoStarted                              time.Time
 	frameTimes                                []time.Time
@@ -174,6 +178,10 @@ func (m *Model) Init() tea.Cmd { return tea.Batch(m.readDir(), m.tick()) }
 func (m *Model) readDir() tea.Cmd {
 	m.listID++
 	id, path, hidden := m.listID, m.dir, m.hidden
+	if m.resultsMode {
+		paths, base := append([]string(nil), m.resultPaths...), m.resultBase
+		return func() tea.Msg { entries, err := browser.ReadPaths(paths, base); return listMsg{id, entries, err} }
+	}
 	return func() tea.Msg { entries, err := browser.Read(path, hidden, ""); return listMsg{id, entries, err} }
 }
 func (m *Model) selected() *browser.Entry {
@@ -383,7 +391,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.allEntries = v.entries
 		m.entries = browser.Filter(v.entries, m.filter)
 		m.sortEntries()
-		if m.filter == "" && filepath.Dir(m.dir) != m.dir {
+		if !m.resultsMode && m.filter == "" && filepath.Dir(m.dir) != m.dir {
 			m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
 		}
 		m.cursor = 0
@@ -645,7 +653,7 @@ func (m *Model) refilter() tea.Cmd {
 	}
 	m.entries = browser.Filter(m.allEntries, m.filter)
 	m.sortEntries()
-	if m.filter == "" && filepath.Dir(m.dir) != m.dir {
+	if !m.resultsMode && m.filter == "" && filepath.Dir(m.dir) != m.dir {
 		m.entries = append([]browser.Entry{{Path: filepath.Dir(m.dir), Name: "..", Dir: true}}, m.entries...)
 	}
 	m.cursor = 0

@@ -2,12 +2,42 @@
 
 [Back to peep](../README.md) · [Terminal graphics](terminal-graphics.md)
 
+## Search results from stdin
+
+Pipe filenames into peep to browse just those results:
+
+```sh
+rg -l "TODO" | peep
+rg -l -0 "TODO" | peep --read0
+find . -type f -name '*.md' -print0 | peep --read0
+```
+
+Use `rg -l` for filenames; ordinary `rg` output includes matching lines and is
+not a file list. Peep reads the complete list before opening the UI. The default
+is one path per line (LF or CRLF); `--read0` accepts NUL separators and preserves
+embedded newlines and carriage returns. Spaces are preserved in both modes.
+Relative paths are resolved from the directory where peep was launched.
+
+Results retain input order, show relative paths to distinguish identical names,
+and include explicitly supplied hidden files. Duplicate paths appear once.
+Search, previews, Vim navigation, editor handoff, and file operations work as in
+the normal browser. `S` chooses a sort; `S` then `i` restores input order.
+Opening a listed directory browses that folder; Backspace from that folder
+returns to the result list. At the result list, Backspace stays in the list.
+
+Empty input exits without opening the UI. Invalid paths produce an error; files
+removed after startup disappear when the list refreshes. Renaming or moving a
+result updates its path, and deleting it removes it from the list. Stdin paths
+cannot be combined with positional paths. Add `--play` only for a list containing
+playable media files. Keyboard input uses `/dev/tty`, so an interactive terminal
+is still required; the default mode starts silently.
+
 ## Controls
 
 | Key | Action |
 |---|---|
 | `j/k`, up/down | Select file; select queue entry when queue is open |
-| `h/l`, left/right, `Backspace` | Parent / enter directory (`Backspace` always goes up) |
+| `h/l`, left/right, `Backspace` | Parent / enter directory; return from a piped result's folder |
 | `Enter` | Enter directory, focus a document, or start selected media |
 | `gg`, `G`, `12G` / `12gg` | First, last, or numbered entry; rendered row in document focus |
 | `5j`, `5k`, `Ctrl+D` / `Ctrl+U` | Counted movement; half-page down / up |
