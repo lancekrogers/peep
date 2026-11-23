@@ -34,8 +34,24 @@ try:
  s.send(b'd');s.expect(b'Are you sure you want to delete');s.send(b'y');s.expect(b'delete complete')
  assert not (folder/'destination/renamed file.txt').exists()
  s.finish()
+ # Confirming a non-empty directory deletes nested contents, not symlink targets.
+ tree=folder/'delete-tree'
+ (tree/'nested/empty').mkdir(parents=True)
+ (tree/'nested/child.txt').write_text('Delete only after confirmation\n')
+ (tree/'outside-link').symlink_to(folder/'destination', target_is_directory=True)
+ (folder/'destination/survivor.txt').write_text('Keep outside target\n')
+ s=Session('directory-delete',str(folder))
+ s.expect(b'delete-tree')
+ s.send(b'/delete-tree');s.expect(b'Filter: delete-tree');s.send(b'\r');s.read(.2)
+ for cancel in (b'n', b'\r', b'\x1b'):
+  s.send(b'd');s.expect(b'ALL files and subdirectories');s.send(cancel);s.read(.2)
+  assert (tree/'nested/child.txt').exists()
+ s.send(b'd');s.expect(b'ALL files and subdirectories');s.send(b'y');s.expect(b'delete complete')
+ assert not tree.exists()
+ assert (folder/'destination/survivor.txt').read_text()=='Keep outside target\n'
+ s.finish()
  s=Session('editor-failure',str(folder/'keep.txt'),env_override={'VISUAL':'peep-editor-that-does-not-exist'})
  s.expect(b'Do not overwrite');s.send(b'e');s.expect(b'Editor:');s.finish()
- print('PASS: overwrite refused, rename persisted, editor handoff/restoration, move persisted, delete cancellation and confirmation')
+ print('PASS: overwrite refused, rename/editor/move, file and recursive directory deletion with cancellation, symlink targets preserved')
 finally:
  if s is not None and s.proc.poll() is None:s.abort()
