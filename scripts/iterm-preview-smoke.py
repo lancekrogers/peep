@@ -15,6 +15,9 @@ class ITermSession(Session):
         self.uploads = 0
         self.acks = 0
         self.multipart = False
+        self.displayed = set()
+        self.handoffs = 0
+        self.blank_transitions = 0
         super().__init__(name, *args, env_override={
             'TERM_PROGRAM': 'iTerm.app', 'TMUX': '', 'STY': '',
         })
@@ -36,6 +39,7 @@ class ITermSession(Session):
             header = command.split(b';', 1)[0]
             fields = dict(part.split(b'=', 1) for part in header.split(b',') if b'=' in part)
             action = fields.get(b'a', b't')
+            image_id = fields.get(b'i')
             if action == b'q':
                 os.write(self.master, b'\x1b_Gi=' + fields[b'i'] + b';OK\x1b\\')
             elif action == b't':
@@ -45,6 +49,15 @@ class ITermSession(Session):
                 if not self.multipart and fields.get(b'q', b'0') == b'0':
                     self.acks += 1
                     os.write(self.master, b'\x1b_Gi=' + fields.get(b'i', b'0') + b';OK\x1b\\')
+            elif action == b'p':
+                if self.displayed and image_id not in self.displayed:
+                    self.handoffs += 1
+                self.displayed.add(image_id)
+            elif action == b'd':
+                was_visible = bool(self.displayed)
+                self.displayed.discard(image_id)
+                if was_visible and not self.displayed:
+                    self.blank_transitions += 1
         return data
 
 sessions = []
@@ -68,10 +81,15 @@ try:
                 while time.monotonic() < until: s.read(.05)
                 assert s.uploads > 2, 'video frames did not advance'
                 assert s.acks == 0, 'video uploads generated input replies'
+                assert s.handoffs > 1, 'video deleted old frames before placing replacements'
+                # Starting playback may hide the static preview once; frame
+                # replacement must not repeatedly expose an empty placement set.
+                assert s.blank_transitions <= 1, 'blank gaps between video frames'
             s.send(b'?'); s.expect(b'BROWSE')
             s.send(b'?'); s.read(.2)
             s.finish()
-    print('PASS: iTerm-style replies, stable native image/video previews, playback, help and terminal cleanup in auto/kitty modes')
+            assert not s.displayed, 'image placements survived exit'
+    print('PASS: iTerm-style replies, stable previews, uninterrupted frame handoffs, help and terminal cleanup in auto/kitty modes')
 except BaseException:
     for session in sessions:
         if session.proc.poll() is None: session.abort()
