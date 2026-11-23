@@ -21,6 +21,7 @@ test-integration: fixtures
 # Exercise the real TUI in a PTY with synthetic fixtures.
 test-tui: build fixtures
     python3 scripts/tui-smoke.py
+    python3 scripts/iterm-preview-smoke.py
     python3 scripts/gif-replay-smoke.py
     python3 scripts/video-playback-smoke.py
     python3 scripts/document-smoke.py
@@ -57,3 +58,7 @@ test-package: package
 # Native video clock/FPS, output backpressure, signals, and interactive editor TTY.
 test-video-playback: build
     python3 scripts/video-playback-smoke.py
+
+# iTerm graphics replies must not restart previews or act as keyboard input.
+test-iterm-previews: build fixtures
+    python3 scripts/iterm-preview-smoke.py
