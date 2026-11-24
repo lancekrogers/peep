@@ -15,12 +15,20 @@ function run(argv) {
         superclass: 'NSImageView',
         protocols: ['NSDraggingSource'],
         methods: {
+            'acceptsFirstMouse:': {
+                types: ['bool', ['id']],
+                implementation: function() { return true; }
+            },
             'mouseDown:': {
                 types: ['void', ['id']],
                 implementation: function(event) {
                     var item = $.NSDraggingItem.alloc.initWithPasteboardWriter(url);
                     item.setDraggingFrameContents($.NSMakeRect(32, 12, 96, 96), icon);
-                    this.beginDraggingSessionWithItemsEventSource([item], event, this);
+                    // JXA bridges a JS array of Objective-C wrappers into
+                    // dictionaries. AppKit needs actual NSDraggingItem objects.
+                    var items = $.NSMutableArray.alloc.init;
+                    items.addObject(item);
+                    this.beginDraggingSessionWithItemsEventSource(items, event, this);
                 }
             },
             'draggingSession:sourceOperationMaskForDraggingContext:': {
@@ -52,7 +60,7 @@ function run(argv) {
     window.releasedWhenClosed = false;
     var delegate = $.PeepDragDelegate.alloc.init;
     window.delegate = delegate;
-    var view = $.PeepDragView.alloc.initWithFrame($.NSMakeRect(100, 50, 160, 120));
+    var view = $.PeepDragView.alloc.initWithFrame($.NSMakeRect(100, 44, 160, 116));
     view.image = icon;
     view.imageScaling = $.NSImageScaleProportionallyUpOrDown;
     window.contentView.addSubview(view);
@@ -61,6 +69,11 @@ function run(argv) {
     label.alignment = $.NSTextAlignmentCenter;
     label.lineBreakMode = $.NSLineBreakByTruncatingMiddle;
     window.contentView.addSubview(label);
+    var hint = $.NSTextField.labelWithString('Drag the file icon into another app');
+    hint.frame = $.NSMakeRect(16, 166, 328, 20);
+    hint.alignment = $.NSTextAlignmentCenter;
+    hint.textColor = $.NSColor.secondaryLabelColor;
+    window.contentView.addSubview(hint);
     window.center;
     window.makeKeyAndOrderFront(null);
     app.activateIgnoringOtherApps(true);
