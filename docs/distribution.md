@@ -7,7 +7,7 @@ FFmpeg and mpv provide media decoding and playback.
 | Channel | Install command | Media dependencies |
 | --- | --- | --- |
 | Homebrew tap | `brew install lancekrogers/tap/peep` | Installed by Homebrew |
-| npm | `npm install -g @obedience-corp/peep` | Install FFmpeg and mpv separately |
+| npm | `npm install -g @obedience-corp/peep` | Run `peep setup` for FFmpeg and mpv |
 | AUR | `yay -S peep-tui-bin` | Installed by the AUR helper |
 
 The executable is always `peep`. The unscoped npm name `peep` and AUR
@@ -116,8 +116,8 @@ only need attention if revoked or expired; npm trusted publishers must remain
 configured for `publish.yml` and the `distribution` environment.
 
 After the first automated release, verify fresh public installs with
-`peep --version` and `peep --doctor`. npm installations need FFmpeg/mpv installed
-separately; see [installation](install.md).
+`peep --version` and `peep --doctor`. For npm installations, `peep setup` installs
+missing FFmpeg/mpv through the system package manager; see [installation](install.md).
 
 Published versions are immutable. If a channel fails, resolve its credential
 or package issue and rerun that channel. If npm publication stopped halfway,

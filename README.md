@@ -38,6 +38,7 @@ brew install lancekrogers/tap/peep
 
 ```sh
 npm install -g @obedience-corp/peep
+peep setup
 ```
 
 **AUR · Arch Linux**
@@ -47,8 +48,8 @@ yay -S peep-tui-bin
 # or: paru -S peep-tui-bin
 ```
 
-Homebrew and AUR install FFmpeg and mpv for media playback. With npm, install
-those tools separately through your system package manager. Mermaid is built in.
+Homebrew and AUR install FFmpeg and mpv for media playback. With npm, `peep setup`
+offers to install missing media tools through your package manager. Mermaid is built in.
 
 ```sh
 peep              # Browse the current directory

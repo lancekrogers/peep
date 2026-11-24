@@ -99,6 +99,28 @@ Deletion is permanent. The confirmation shows the target: `y` confirms; `n`, Ent
 
 The editor command supports quoted paths and arguments, without shell expansion. The file path is passed as a separate absolute argument. For graphical editors, configure their wait flag (for example `EDITOR="code --wait"`). Peep releases the terminal while the editor runs and refreshes the listing and preview on return.
 
+### Copy and drag files to other apps
+
+- `y`: copy the exact absolute path to the desktop clipboard, with no added quotes or newline.
+- `Y`: copy the selected image's pixels for pasting into apps that accept images.
+- `Ctrl+G`: open a small desktop window; drag its icon into a chat, upload area, or another app. Press `Ctrl+G` again to close it.
+
+These actions use the selected browser/queue entry, or the displayed file when
+the preview is focused. Copy image retains the original resolution, uses the
+first frame of a GIF, and never changes the original. FFmpeg converts it to PNG
+with a 30-second deadline and a 64 MiB output limit; errors leave the clipboard
+untouched before handing data to the desktop. Dragging passes the original file,
+not a screenshot of its preview. Peep remains usable while the drag window is open.
+
+macOS uses a native drag window. Linux uses optional desktop helpers described in
+[installation](install.md#optional-desktop-sharing-tools). Both need a local
+desktop session; an SSH path is not a transferable file on the client machine.
+Copying a path is plain text, while copying an image makes its pixels available
+to the receiving app. Whether a particular chat accepts a paste/drop is up to it.
+
+`peep setup` is reserved for media setup; use `peep ./setup` to open a file or
+directory literally named `setup`.
+
 ## Document previews
 
 Text and Markdown files have scrollable previews. Enter or `f` focuses a document; Escape returns to the browser. File filtering and playback controls remain available while reading. Reads are bounded to 2 MiB and layout to 12,000 rows, with explicit truncation markers. Non-UTF-8, binary, and special files are not decoded as text. Documents never enter media queues. Remote document resources are not fetched.

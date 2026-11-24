@@ -45,8 +45,9 @@ func (m *Model) helpSections() []helpSection {
 			{"Ctrl+U", "Clear search while typing"}, {"R", "Source / rendered Markdown"},
 		}},
 		{"FILE ACTIONS", danger, []helpBinding{
+			{"y / Y", "Copy path / image pixels"}, {"Ctrl+G", "Open / close desktop drag window"},
 			{"e", "Open in default editor"}, {"Ctrl+R", "Rename"}, {"M", "Move"},
-			{"d / Delete", "Delete with confirmation"}, {"y", "Confirm deletion, including contents"},
+			{"d / Delete", "Delete with confirmation"}, {"y in dialog", "Confirm deletion, including contents"},
 			{"Enter / Esc / n", "Cancel deletion"},
 		}},
 		{"QUEUE & MOUSE", accent, []helpBinding{
