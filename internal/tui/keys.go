@@ -14,6 +14,9 @@ import (
 func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	key := k.String()
 	if key == "ctrl+c" || (!m.filtering && !m.docSearch.editing && m.filePrompt == nil && key == "q") {
+		if m.dragCancel != nil {
+			m.dragCancel()
+		}
 		m.clearSpectrum()
 		m.cancelDocumentImages()
 		if m.previewCancel != nil {
@@ -146,6 +149,12 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	}
 
 	switch key {
+	case "y":
+		return m.share("path")
+	case "Y":
+		return m.share("image")
+	case "ctrl+g":
+		return m.share("drag")
 	case "F":
 		return m.cycleVideoFPS()
 	case "tab", "shift+tab", "t":

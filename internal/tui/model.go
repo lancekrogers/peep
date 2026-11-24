@@ -99,6 +99,8 @@ type Model struct {
 	wanted                                    string
 	listID, previewID, loadID                 int
 	previewCancel, loadCancel                 context.CancelFunc
+	dragCancel                                context.CancelFunc
+	copying                                   bool
 	preview                                   media.Info
 	rows                                      []string
 	frames                                    <-chan media.Frame
@@ -361,6 +363,9 @@ func (m *Model) control(fn func(context.Context, *player.Player) error, seek *fl
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch v := msg.(type) {
+	case sharingMsg:
+		m.shared(v)
+		return m, nil
 	case fileOperationMsg:
 		return m, m.applyFileOperation(v)
 	case editorDoneMsg:

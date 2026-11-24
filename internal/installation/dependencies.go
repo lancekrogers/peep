@@ -1,27 +1,56 @@
 package installation
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 func EnsureMedia(ctx context.Context, in io.Reader, out, stderr io.Writer) error {
-	missing := false
+	return ensureMedia(ctx, in, out, stderr, false, runtime.GOOS, os.Geteuid() == 0, exec.LookPath)
+}
+
+// SetupMedia installs dependencies only, leaving package-manager-owned peep
+// executables alone. Interactive setup defaults to cancel; --yes is explicit.
+func SetupMedia(ctx context.Context, in io.Reader, out, stderr io.Writer, yes bool) error {
+	return ensureMedia(ctx, in, out, stderr, !yes, runtime.GOOS, os.Geteuid() == 0, exec.LookPath)
+}
+
+func ensureMedia(ctx context.Context, in io.Reader, out, stderr io.Writer, confirm bool, platform string, root bool, lookup func(string) (string, error)) error {
+	var missing []string
 	for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
-		if _, err := exec.LookPath(name); err != nil {
-			missing = true
+		if _, err := lookup(name); err != nil {
+			missing = append(missing, name)
 		}
 	}
-	if !missing {
+	if len(missing) == 0 {
+		fmt.Fprintln(out, "Media tools are ready: ffmpeg, ffprobe, mpv")
 		return nil
 	}
-	plan, err := dependencyPlan(runtime.GOOS, os.Geteuid() == 0, exec.LookPath)
+	plan, err := dependencyPlan(platform, root, lookup)
 	if err != nil {
 		return err
+	}
+	fmt.Fprintf(out, "Missing media tools: %s\n", strings.Join(missing, ", "))
+	for _, args := range plan {
+		fmt.Fprintln(out, "  "+strings.Join(args, " "))
+	}
+	if confirm {
+		fmt.Fprint(out, "Install these media dependencies? [y/N] ")
+		answer, err := bufio.NewReader(in).ReadString('\n')
+		if err != nil && err != io.EOF {
+			return fmt.Errorf("read setup confirmation: %w", err)
+		}
+		answer = strings.ToLower(strings.TrimSpace(answer))
+		if err != nil || (answer != "y" && answer != "yes") {
+			fmt.Fprintln(out, "Setup cancelled; nothing installed")
+			return nil
+		}
 	}
 	for _, args := range plan {
 		fmt.Fprintf(out, "Installing media dependencies: %v\n", args)
@@ -34,10 +63,11 @@ func EnsureMedia(ctx context.Context, in io.Reader, out, stderr io.Writer) error
 		}
 	}
 	for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
-		if _, err := exec.LookPath(name); err != nil {
+		if _, err := lookup(name); err != nil {
 			return fmt.Errorf("%s is still missing after dependency installation", name)
 		}
 	}
+	fmt.Fprintln(out, "Media tools are ready: ffmpeg, ffprobe, mpv")
 	return nil
 }
 func dependencyPlan(platform string, root bool, lookup func(string) (string, error)) ([][]string, error) {
@@ -45,10 +75,10 @@ func dependencyPlan(platform string, root bool, lookup func(string) (string, err
 		if path, err := lookup("brew"); err == nil {
 			return [][]string{{path, "install", "ffmpeg", "mpv"}}, nil
 		}
-		return nil, fmt.Errorf("Homebrew is required to install media tools; install ffmpeg/mpv or use --no-deps")
+		return nil, fmt.Errorf("install Homebrew, then run peep setup; or install ffmpeg and mpv manually")
 	}
 	if platform != "linux" {
-		return nil, fmt.Errorf("automatic media setup is unavailable on %s; use --no-deps", platform)
+		return nil, fmt.Errorf("automatic media setup is unavailable on %s; install ffmpeg and mpv manually", platform)
 	}
 	for _, candidate := range []struct {
 		name string
@@ -62,11 +92,11 @@ func dependencyPlan(platform string, root bool, lookup func(string) (string, err
 		if !root {
 			sudo, err := lookup("sudo")
 			if err != nil {
-				return nil, fmt.Errorf("sudo is required to install media tools; install them manually or use --no-deps")
+				return nil, fmt.Errorf("sudo is required to install media tools; install ffmpeg and mpv manually")
 			}
 			command = append([]string{sudo}, command...)
 		}
 		return [][]string{command}, nil
 	}
-	return nil, fmt.Errorf("no supported package manager found; install ffmpeg/mpv or use --no-deps")
+	return nil, fmt.Errorf("no supported package manager found; install ffmpeg and mpv manually")
 }

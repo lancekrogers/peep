@@ -10,6 +10,11 @@ test-install: build
 test-stdin: build
     python3 scripts/stdin-smoke.py
 
+# Desktop actions in a real PTY with isolated helpers, and setup without installs.
+test-sharing: build
+    python3 scripts/setup-smoke.py
+    python3 scripts/sharing-smoke.py
+
 # Formatting, static analysis, unit tests, and build.
 check:
     test -z "$(gofmt -l cmd internal)"

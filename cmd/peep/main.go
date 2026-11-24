@@ -25,6 +25,9 @@ import (
 var version = "dev"
 
 func run() error {
+	if len(os.Args) > 1 && os.Args[1] == "setup" {
+		return setup(os.Args[2:])
+	}
 	if len(os.Args) == 2 && os.Args[1] == diagram.WorkerArgument {
 		return diagram.Worker(context.Background(), os.Stdin, os.Stdout)
 	}
@@ -43,7 +46,7 @@ func run() error {
 	renderer := flags.String("renderer", "auto", "image/video renderer: auto, kitty, or cells")
 	audio := flags.String("audio-output", "", "mpv audio output override (null for automated tests)")
 	flags.Usage = func() {
-		fmt.Fprint(flags.Output(), "peep — terminal file previews and media\n\nUsage: peep [flags] [directory | files...]\n       rg -l PATTERN | peep\n       rg -l -0 PATTERN | peep --read0\n")
+		fmt.Fprint(flags.Output(), "peep — terminal file previews and media\n\nUsage: peep [flags] [directory | files...]\n       peep setup [--yes]\n       rg -l PATTERN | peep\n       rg -l -0 PATTERN | peep --read0\n")
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(os.Args[1:]); err != nil {
@@ -115,7 +118,7 @@ func run() error {
 		}
 		fmt.Printf("Mermaid: built in (mmdg %s; embedded fonts)\n", diagram.Version)
 		if missing {
-			return fmt.Errorf("install missing media tools; see README.md")
+			return fmt.Errorf("run peep setup to install missing media tools")
 		}
 		return nil
 	}

@@ -10,19 +10,44 @@ brew install lancekrogers/tap/peep
 
 # npm (macOS / Linux, Node 22+)
 npm install -g @obedience-corp/peep
+peep setup
 
 # AUR (Arch Linux): includes FFmpeg and mpv
 yay -S peep-tui-bin
 # or: paru -S peep-tui-bin
 ```
 
-For npm installs, install the media tools separately:
+For npm installs, `peep setup` checks FFmpeg, ffprobe, and mpv; shows the
+Homebrew/apt-get/dnf/pacman command; and asks before running it. Enter or `n`
+cancels. Existing tools are left alone when all three are present. Setup only
+installs dependencies and does not relocate or reinstall peep. Use
+`peep setup --yes` for unattended setup. Linux may request sudo authentication.
+If no supported package manager is available, setup explains what is missing.
+
+Alternatively, install the media tools manually:
 
 ```sh
 brew install ffmpeg mpv               # macOS / Homebrew Linux
 sudo apt install ffmpeg mpv           # Debian / Ubuntu
 sudo pacman -S ffmpeg mpv             # Arch Linux
 ```
+
+### Optional desktop sharing tools
+
+macOS path/image copying and the drag window use built-in system tools. Linux
+path/image copying uses `wl-copy` on Wayland or `xclip` on X11 (`xsel` also works
+for text paths). Linux drag windows use `ripdrag`, `dragon-drop`, or `dragon`,
+whichever is available, in that order. Install these separately when wanted:
+
+```sh
+sudo apt install wl-clipboard xclip              # Debian/Ubuntu clipboard
+sudo pacman -S wl-clipboard xclip dragon         # Arch Linux
+```
+
+For the Linux drag helper, see [ripdrag](https://github.com/nik012003/ripdrag) or
+[dragon](https://github.com/mwh/dragon) for installation on your distribution. Clipboard and
+drag actions require a local graphical session; they do not transfer files from
+an SSH host. `peep setup` handles media dependencies only.
 
 Upgrade through the same package manager. Use `command -v peep` to check which
 installation your shell runs if you have installed peep through multiple methods.

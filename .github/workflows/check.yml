@@ -34,12 +34,57 @@ jobs:
       - run: python3 scripts/package-smoke.py
       - run: go build -o bin/peep ./cmd/peep
       - run: python3 scripts/install-smoke.py
+      - run: python3 scripts/setup-smoke.py && python3 scripts/sharing-smoke.py
       - uses: actions/upload-artifact@v4
         with:
           name: peep-${{ matrix.runner }}
           path: |
             dist/*.tar.gz
             dist/*.sha256
+
+  desktop:
+    strategy:
+      matrix:
+        runner: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Install Linux desktop test tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg xclip xvfb xauth python3-gi gir1.2-gtk-3.0 xdotool weston wl-clipboard libgtk-3-dev libfontconfig1-dev
+          # Pin the upstream helper used for the drag interoperability test.
+          mkdir -p tmp/desktop-bin
+          curl -fsSL https://raw.githubusercontent.com/mwh/dragon/fe0711d603008688ef60497d0e5f295d8331a1a0/dragon.c -o tmp/dragon.c
+          cc --std=c99 tmp/dragon.c -o tmp/desktop-bin/dragon $(pkg-config --cflags --libs gtk+-3.0 fontconfig)
+          echo "$PWD/tmp/desktop-bin" >> "$GITHUB_PATH"
+      - name: Install macOS media test tools
+        if: runner.os == 'macOS'
+        run: command -v ffmpeg || brew install ffmpeg
+      - run: go build -o bin/peep ./cmd/peep
+      - name: macOS native clipboard and drag startup
+        if: runner.os == 'macOS'
+        run: |
+          PEEP_DESKTOP_INTEGRATION=1 go test -count=1 -run TestNativeClipboard ./internal/desktop
+          python3 scripts/macos-drag-smoke.py
+      - name: X11 native clipboard and file drop
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run -a env PEEP_DESKTOP_INTEGRATION=1 go test -count=1 -run TestNativeClipboard ./internal/desktop
+          xvfb-run -a /usr/bin/python3 scripts/linux-drag-smoke.py
+      - name: Wayland native clipboard
+        if: runner.os == 'Linux'
+        run: xvfb-run -a bash scripts/wayland-clipboard-smoke.sh go test -count=1 -run TestNativeClipboard ./internal/desktop
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: desktop-${{ matrix.runner }}-logs
+          path: tmp/acceptance/
 
   playback:
     runs-on: ubuntu-latest
