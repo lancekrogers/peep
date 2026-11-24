@@ -68,13 +68,18 @@ func (m *Model) fileRows(w, h int, queue bool) []string {
 		}
 		gutter := fmt.Sprintf("%*d ", len(fmt.Sprint(count)), number)
 		nameWidth := max(1, w-9-len(gutter))
+		size := ""
+		if !queue && w >= 32 {
+			size = " " + color(fmt.Sprintf("%10s", m.entries[i].SizeLabel()), muted)
+			nameWidth = max(1, nameWidth-11)
+		}
 		metadata := ""
-		if !queue && w >= 68 && m.sortField != "" && m.sortField != browser.SortName {
+		if !queue && w >= 68 && m.sortField != "" && m.sortField != browser.SortName && m.sortField != browser.SortSize {
 			metadata = " " + color(render.Fit(render.Safe(m.entries[i].SortValue(m.sortField)), 17), muted)
 			nameWidth = max(1, nameWidth-18)
 		}
 		shade := fileColor(name, kind)
-		row := marker + color(gutter, muted) + color(render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth), shade) + " " + color(render.Fit(kind, 5), shade) + metadata
+		row := marker + color(gutter, muted) + color(render.Fit(ansi.Truncate(render.Safe(name), nameWidth, "…"), nameWidth), shade) + " " + color(render.Fit(kind, 5), shade) + metadata + size
 		if !queue && m.entries[i].Name == ".." {
 			row = marker + color(gutter, muted) + color("../ Parent directory", accent)
 		}

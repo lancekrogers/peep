@@ -97,12 +97,21 @@ func dateValue(t time.Time) string {
 	return t.Local().Format("2006-01-02 15:04")
 }
 
+// SizeLabel describes a file's content size, not a directory inode or link text.
+// Metadata is cached by the listing; rendering must not walk directory trees.
+func (e Entry) SizeLabel() string {
+	if e.Dir || e.Symlink || !e.Metadata || e.Size < 0 {
+		return "—"
+	}
+	return sizeValue(e.Size)
+}
+
 func sizeValue(size int64) string {
 	if size < 1024 {
 		return fmt.Sprintf("%d B", size)
 	}
 	value := float64(size)
-	units := []string{"B", "KiB", "MiB", "GiB", "TiB"}
+	units := []string{"B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
 	i := 0
 	for value >= 1024 && i < len(units)-1 {
 		value /= 1024
