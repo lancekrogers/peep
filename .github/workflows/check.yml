@@ -67,7 +67,7 @@ jobs:
         if: runner.os == 'macOS'
         run: command -v ffmpeg || brew install ffmpeg
       - run: go build -o bin/peep ./cmd/peep
-      - name: macOS native clipboard and drag startup
+      - name: macOS native clipboard and file drag session
         if: runner.os == 'macOS'
         run: |
           PEEP_DESKTOP_INTEGRATION=1 go test -count=1 -run TestNativeClipboard ./internal/desktop
