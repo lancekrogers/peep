@@ -139,6 +139,9 @@ try:
         mark = len(s.log)
         if keys: s.send(keys)
         for needle in wanted: shown(s, needle, mark)
+    # The wheel turns the page at an edge, like the scroll keys.
+    for wheel, wanted in ((b'\x1b[<64;60;10M', b'page 2/3'), (b'\x1b[<65;60;10M', b'page 3/3')):
+        mark = len(s.log); s.send(wheel); shown(s, wanted, mark)
     s.finish()
 
     # Without poppler the PDF explains itself and peep keeps working.
@@ -150,7 +153,7 @@ try:
     assert not poppler_running(path)
     left = [str(p.relative_to(work)) for folder in isolated.values() for p in folder.rglob('*')]
     assert not left, f'files written: {left}'
-    print('PASS: native PNG equals pdftoppm at columns x cell width, page turn, crop scroll, change reload, no files written, cells text/picture/search/jump, missing poppler, cleanup')
+    print('PASS: native PNG equals pdftoppm at columns x cell width, page turn, crop scroll, change reload, no files written, cells text/picture/search/jump/wheel paging, missing poppler, cleanup')
 finally:
     for s in sessions:
         if s.proc.poll() is None: s.abort()

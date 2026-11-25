@@ -242,6 +242,50 @@ func TestPDFScrollCrossesPageEdges(t *testing.T) {
 	}
 }
 
+func TestPDFWheelCrossesPageEdges(t *testing.T) {
+	for _, focused := range []bool{true, false} {
+		m, f := pdfModel(t, 3, true)
+		f.rows = map[int]int{1: 70}
+		if !focused {
+			press(m, tea.KeyEsc)
+		}
+		l := m.layout()
+		over := tea.MouseMsg{X: l.files + 4, Y: 5}
+		wheel := func(button tea.MouseButton) {
+			over.Button = button
+			drain(m, m.mouse(over))
+		}
+		for i := 0; i < 100 && m.docOffset < bottom(m); i++ {
+			wheel(tea.MouseButtonWheelDown)
+		}
+		if m.pdf.page != 1 || m.docOffset != bottom(m) {
+			t.Fatalf("focused=%v: wheel did not scroll within the page", focused)
+		}
+		wheel(tea.MouseButtonWheelDown)
+		if m.pdf.page != 2 || m.docOffset != 0 {
+			t.Fatalf("focused=%v: wheel at the bottom: page %d offset %d", focused, m.pdf.page, m.docOffset)
+		}
+		wheel(tea.MouseButtonWheelUp)
+		if m.pdf.page != 1 || m.docOffset != bottom(m) {
+			t.Fatalf("focused=%v: wheel at the top: page %d offset %d", focused, m.pdf.page, m.docOffset)
+		}
+		wheel(tea.MouseButtonWheelUp)
+		if m.docOffset != bottom(m)-3 {
+			t.Fatalf("focused=%v: wheel up moved to %d", focused, m.docOffset)
+		}
+		m.docOffset = 0
+		wheel(tea.MouseButtonWheelUp)
+		if m.pdf.page != 1 || m.docOffset != 0 {
+			t.Fatalf("focused=%v: wheel wrapped before the first page", focused)
+		}
+		over.X, m.docOffset = 0, bottom(m)
+		wheel(tea.MouseButtonWheelDown)
+		if m.pdf.page != 1 {
+			t.Fatalf("focused=%v: wheel outside the preview turned a page", focused)
+		}
+	}
+}
+
 func TestPDFIgnoresLateAndInFlightResults(t *testing.T) {
 	m, f := pdfModel(t, 4, true)
 	stale := m.key(tea.KeyMsg{Type: tea.KeyRight})
