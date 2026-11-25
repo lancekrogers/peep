@@ -148,7 +148,7 @@ Focused text previews support `/` or `Ctrl+F` to find text in the displayed docu
 
 PDFs preview one page at a time through poppler (`pdfinfo`, `pdftoppm`, `pdftotext`); `peep setup` installs it, and without it a selected PDF says that PDF preview needs poppler. With native graphics a page shows as a picture rendered at the pane's width and the terminal's cell size in pixels. Other terminals show the page's extracted text by default. `R` switches between picture and text; in cell terminals the picture is drawn in color cells. The title reads `PDF · page 3/12` or `PDF text · page 3/12`.
 
-In a focused PDF, `j/k`, arrows, `Ctrl+D`/`Ctrl+U` and PgUp/PgDn scroll within the page; from the bottom or top edge they turn to the next or previous page. PgUp/PgDn do this unfocused as well. `→`/`l` and `←`/`h` turn pages, `12G` or `12gg` goes to page 12, and page turns stop at the first and last page. The mouse wheel scrolls within a page.
+In a focused PDF, `j/k`, arrows, `Ctrl+D`/`Ctrl+U` and PgUp/PgDn scroll within the page; from the bottom or top edge they turn to the next or previous page. PgUp/PgDn do this unfocused as well. `→`/`l` and `←`/`h` turn pages, `12G` or `12gg` goes to page 12, and page turns stop at the first and last page. The mouse wheel over the preview scrolls the same way, focused or not: it turns the page from an edge.
 
 `/` searches the current page's text in the text view. In the picture view it shows a reminder to press `R`. While reading a PDF with no active search, `n` keeps its next-track meaning. If the file changes on disk while open, peep reopens it, keeps the nearest page, and says so. Password-protected PDFs show a message instead of a preview.
 

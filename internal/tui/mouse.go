@@ -29,6 +29,9 @@ func (m *Model) mouse(msg tea.MouseMsg) tea.Cmd {
 			if msg.Button == tea.MouseButtonWheelUp {
 				delta = -3
 			}
+			if m.pdf != nil {
+				return m.pdfNavigate("", 0, delta, false)
+			}
 			m.scrollDocument(delta)
 			return m.requestDocumentImages()
 		}
