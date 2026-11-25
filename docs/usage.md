@@ -45,6 +45,9 @@ is still required; the default mode starts silently.
 | `PgUp/PgDn` | Page through document preview, otherwise file list or queue |
 | `j/k`, arrows, Home/End in document focus | Scroll document / beginning / end |
 | `R` on Markdown | Toggle styled Markdown and source |
+| `R` on a PDF | Toggle page picture and page text |
+| `h/l`, left/right in PDF focus | Previous / next page |
+| `12G` / `12gg` in PDF focus | Go to page 12; `gg`/Home first page, `G`/End bottom of the last page |
 | `/` or `Ctrl+F`, `Esc` | Search files and folders / go back (close overlay, return from focus, clear filter, then parent) |
 | `H` | Toggle hidden files |
 | `S` in browser | Sort by name, modified, created, size, or type; reverse order |
@@ -138,6 +141,16 @@ The renderer is pinned to v0.13.0 in peep's Go module, with embedded fonts. Peep
 Flowcharts, sequence diagrams, and class diagrams are tested. PNGs fit within 1600 × 1600 pixels; the source limit is 128 KiB and the worker deadline is eight seconds. Invalid diagrams retain readable source and an error. No links are opened and no remote image assets are fetched. `just test-mermaid` exercises the built-in renderer; `just test-package` verifies a relocated and installed package with an empty tool PATH.
 
 Focused text previews support `/` or `Ctrl+F` to find text in the displayed document. Search is literal and case-insensitive, with highlighted matches and a match counter. Enter keeps the search; `n` and `N` jump to the next/previous occurrence and wrap at the ends. Escape while typing clears the search and restores the original scroll position; Ctrl+U clears the query. Browser filename filtering stays separate. Use `R` to search Markdown/Mermaid source instead of rendered text.
+
+### PDF previews
+
+![Reading the demo field log in peep's cell renderer](assets/pdf-preview.gif)
+
+PDFs preview one page at a time through poppler (`pdfinfo`, `pdftoppm`, `pdftotext`); `peep setup` installs it, and without it a selected PDF says that PDF preview needs poppler. With native graphics a page shows as a picture rendered at the pane's width and the terminal's cell size in pixels. Other terminals show the page's extracted text by default. `R` switches between picture and text; in cell terminals the picture is drawn in color cells. The title reads `PDF · page 3/12` or `PDF text · page 3/12`.
+
+In a focused PDF, `j/k`, arrows, `Ctrl+D`/`Ctrl+U` and PgUp/PgDn scroll within the page; from the bottom or top edge they turn to the next or previous page. PgUp/PgDn do this unfocused as well. `→`/`l` and `←`/`h` turn pages, `12G` or `12gg` goes to page 12, and page turns stop at the first and last page. The mouse wheel scrolls within a page.
+
+`/` searches the current page's text in the text view. In the picture view it shows a reminder to press `R`. While reading a PDF with no active search, `n` keeps its next-track meaning. If the file changes on disk while open, peep reopens it, keeps the nearest page, and says so. Password-protected PDFs show a message instead of a preview.
 
 Symbolic links use a cyan `LINK` badge and filename, including directory links and dangling links; directory links still open normally.
 

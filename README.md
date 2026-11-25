@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/7cfbda66-c8d0-4ab9-9766-4a7b1b02f94b
 - **Browse** with Vim navigation, numbered jumps, sorting, fuzzy search, and globs.
 - **Watch** images, animated GIFs, and videos with native terminal graphics.
 - **Listen** to music and audiobooks with seeking, playback speed, and a live spectrum.
-- **Read** syntax-highlighted source, Markdown with local images, and Mermaid diagrams.
+- **Read** syntax-highlighted source, Markdown with local images, Mermaid diagrams, and PDFs page by page.
 - **Manage** files with rename, move, confirmed deletion, and your preferred editor.
 
 ## Get started
@@ -56,6 +56,7 @@ package manager. Mermaid is built in.
 peep              # Browse the current directory
 peep ~/Pictures   # Browse a directory (peep <path>)
 peep README.md     # Preview a file
+peep manual.pdf   # Read a PDF: → / ← turn pages, R switches picture and text
 rg -l "TODO" | peep # Browse files matching a content search
 peep --doctor     # Check media and PDF dependencies and terminal support
 ```

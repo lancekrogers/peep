@@ -74,3 +74,9 @@ also preserve content when an asset above the viewport grows, preserve an exact
 position inside an image on reload, and keep later image completion from moving
 the viewport. The original implementation repeatedly jumped from around row 28
 to row 8 in the same PTY reproduction.
+
+## PDF preview
+
+Verified on macOS arm64 with poppler 26.10. `just test-pdf` (also in `just test-tui`) runs the real executable and poppler in a PTY that reports 10 × 20 pixel cells, with `HOME`, `TMPDIR` and `XDG_CACHE_HOME` pointed at empty directories. The transmitted page-1 PNG, reassembled from the Kitty protocol chunks, is exactly as wide as the pane's columns × 10 and byte-identical to a direct `pdftoppm` render at the same size. Page 2 matches after a page turn, and scrolling moves the crop without changing the page. Rewriting the file while it is open triggers the reload notice and a page that matches the new content. The cell session shows page text, the half-block picture after `R`, a page turn, an in-page search and `3G`. Without poppler on PATH, the PDF shows the missing-poppler message and the next file still previews. Afterwards the isolated directories are empty and no poppler process remains.
+
+`PEEP_INTEGRATION=1 go test ./internal/document` covers the renderer against generated PDFs, including rotated and extreme page sizes, password protection, cache hits, a file swapped mid-render, and the absence of disk writes. Model tests use a fake renderer for paging, landing positions, prefetch, mode toggling and change handling. The PTY evidence covers protocol bytes, not how a particular graphical terminal places the image; Linux poppler builds were not run locally.

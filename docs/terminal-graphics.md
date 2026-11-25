@@ -16,6 +16,7 @@ Auto mode tests support at startup. If the client does not answer or rejects the
 - The queue stops with an error on a bad item; use next or select another file. Automatic skip-on-error is deferred. Stopping during load cancels it; Play retries the retained entry.
 - Preferences, queue state, and position are session-local. No automatic resume or persistent configuration yet.
 - Shuffle, image zoom/pan, custom bindings, timestamp entry, drag scrubbing, queue reordering, subtitles, and network streams are deferred from the broader design.
+- PDF preview needs poppler and shows one page at a time. Search covers the current page's extracted text, not the page picture or other pages. Password-protected PDFs are not supported. Without native graphics, page pictures are color cells at half-block resolution.
 - Support is based on the installed FFmpeg/mpv build. Filename recognition is not a codec guarantee. Tested fixture details live in [verification](verification.md).
 
 [Back to peep](../README.md)
