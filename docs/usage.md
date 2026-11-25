@@ -152,6 +152,8 @@ In a focused PDF, `j/k`, arrows, `Ctrl+D`/`Ctrl+U` and PgUp/PgDn scroll within t
 
 `/` searches the current page's text in the text view. In the picture view it shows a reminder to press `R`. While reading a PDF with no active search, `n` keeps its next-track meaning. If the file changes on disk while open, peep reopens it, keeps the nearest page, and says so. Password-protected PDFs show a message instead of a preview.
 
+To try it on a real paper, run `peep examples/papers/bitcoin.pdf` from the repository or an extracted release archive; [its README](../examples/papers/README.md) records where the file comes from.
+
 Symbolic links use a cyan `LINK` badge and filename, including directory links and dangling links; directory links still open normally.
 
 Press `S` in the browser for sorting: `n` name, `m` last modified, `c` date created, `s` size, `t` extension/type, or `r` reverse the current order. Dates start newest first and sizes largest first. Directories stay first; unavailable metadata stays last. Sorting preserves the selected entry and persists across folders and filters during the session. Creation time uses filesystem birth time on macOS and Linux where supported, never inode-change time. Directory sizes describe the directory entry, not recursive contents; symlink metadata describes the link itself.

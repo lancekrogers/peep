@@ -33,6 +33,8 @@ browser and media room. Avoid forcing `--renderer=kitty` on an unsupported clien
    Enter to read it, then `→` / `←` to turn its three pages. `R` switches between
    the page picture and its text; in text, search `/antenna`. `3G` jumps to the
    last page. PDF preview needs poppler (`peep setup`).
+   For dense, typeset pages, open `examples/papers/bitcoin.pdf` from the repository
+   (see its [README](../examples/papers/README.md)) and scroll straight through its nine pages.
 8. **Finish with file operations.** Stop playback with `s`. On a sample in the disposable copy, show
    Ctrl+R rename or `M` move. `d` opens a compact confirmation; `n` cancels and
    `y` deletes. A fresh `just demo` restores the collection for another take.
