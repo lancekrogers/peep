@@ -9,7 +9,7 @@ import subprocess
 import tempfile
 from tui_session import Session, ROOT
 
-CELL = (10, 20)
+CELL = (9, 18)  # differs from the renderer's 10 x 20 fallback, so the winsize query is what sizes the page
 WORK = ROOT/'tmp'
 WORK.mkdir(exist_ok=True)
 
