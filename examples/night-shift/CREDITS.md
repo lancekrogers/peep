@@ -11,6 +11,9 @@ are included.
   and encoded using FFmpeg. The GIF is silent; the MP4 has music.
 - **Audiobook:** two original short chapters. Synthetic narration uses the macOS
   Samantha voice through `say`; it is not a recording of a human narrator.
+- **Field log PDF:** an original three-page document assembled by
+  `cmd/peep-demo-assets` from vector shapes and text. It names only the standard
+  PDF fonts (Helvetica, Times, Courier); no font is embedded.
 - **Cover, logo, diagrams, and text:** original peep demo material. SVG sources
   and narration transcripts are included.
 

@@ -1,4 +1,4 @@
-// peep-demo-assets creates original artwork and an original instrumental score.
+// peep-demo-assets creates original artwork, a field-log PDF and an original instrumental score.
 // Writes only to the requested output directory; FFmpeg encodes distribution media.
 package main
 
@@ -53,6 +53,9 @@ func generate(out string) error {
 				return err
 			}
 		}
+	}
+	if err := os.WriteFile(filepath.Join(out, "night-log.pdf"), fieldLogPDF(), 0644); err != nil {
+		return err
 	}
 	return music(filepath.Join(out, "night-shift.wav"))
 }

@@ -17,6 +17,7 @@ Images, animation, audio, diagrams, and documents all belong here.
 | 04-audiobook | Two narrated chapters | Seek, change speed with `z` / `x`, reset with `c` |
 | 05-diagrams | Signal path and shift handoff | Render Mermaid; `R` reveals the source |
 | 06-code | Go, JSON, and YAML | Syntax highlighting and in-file search |
+| 07-documents | The night's field log | Turn PDF pages with `→`; `R` shows the page or its text |
 
 ## The signal path
 

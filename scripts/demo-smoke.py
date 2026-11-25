@@ -19,6 +19,12 @@ for path in media:
 for path in (root/'05-diagrams').glob('*.mmd'):
     result = subprocess.run([str(ROOT/'bin/peep'),'__peep_mermaid_png_v1'],input=path.read_bytes(),capture_output=True,check=True,timeout=10)
     assert result.stdout.startswith(b'\x89PNG'), path
+pdf = root/'07-documents/night-log.pdf'
+fonts = subprocess.check_output(['pdffonts', str(pdf)], text=True).splitlines()[2:]
+assert fonts and all(line.split()[-5] == 'no' for line in fonts), fonts
+assert 'Pages:           3' in subprocess.check_output(['pdfinfo', str(pdf)], text=True)
+for page, word in ((1, 'Antenna'), (2, 'Satellite'), (3, 'Handoff')):
+    assert word in subprocess.check_output(['pdftotext', '-f', str(page), '-l', str(page), str(pdf), '-'], text=True), word
 assert (root/'field-guide-link.md').resolve()==root/'00-start-here.md'
 assert (root/'images-link').resolve()==root/'01-images'
 s=None
@@ -46,6 +52,6 @@ try:
     assert b'a=t,f=100' in s.log, 'no native PNG upload'
     s.send(b'/signal');s.expect(b'Match');s.send(b'\r');s.read(.2);s.send(b'n');s.read(.2)
     s.send(b'R');s.expect(b'Source');s.finish()
-    print('PASS: disposable demo recipe, demo streams decode, all diagrams render, audiobook playback/seek/next, music, illustrated Markdown/search/source, cleanup')
+    print('PASS: disposable demo recipe, demo streams decode, all diagrams render, field-log PDF has unembedded fonts and per-page text, audiobook playback/seek/next, music, illustrated Markdown/search/source, cleanup')
 finally:
     if s is not None and s.proc.poll() is None:s.abort()
