@@ -144,6 +144,10 @@ Focused text previews support `/` or `Ctrl+F` to find text in the displayed docu
 
 ### PDF previews
 
+![A page of the Bitcoin paper drawn as an image in a Kitty-graphics terminal](assets/pdf-page-5.jpg)
+
+*Native graphics, in Ghostty. The recording below shows the same reader in a terminal without them: page text, and pictures in color cells.*
+
 ![Reading the demo field log in peep's cell renderer](assets/pdf-preview.gif)
 
 PDFs preview one page at a time through poppler (`pdfinfo`, `pdftoppm`, `pdftotext`); `peep setup` installs it, and without it a selected PDF says that PDF preview needs poppler. With native graphics a page shows as a picture rendered at the pane's width and the terminal's cell size in pixels. Other terminals show the page's extracted text by default. `R` switches between picture and text; in cell terminals the picture is drawn in color cells. The title reads `PDF · page 3/12` or `PDF text · page 3/12`.
