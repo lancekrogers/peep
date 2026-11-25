@@ -5,32 +5,37 @@ Mermaid rendering and fonts are compiled into peep. The native executable needs 
 ## Package managers
 
 ```sh
-# Homebrew (macOS / Linux): includes FFmpeg and mpv
+# Homebrew (macOS / Linux): includes FFmpeg, mpv and poppler
 brew install lancekrogers/tap/peep
 
 # npm (macOS / Linux, Node 22+)
 npm install -g @obedience-corp/peep
 peep setup
 
-# AUR (Arch Linux): includes FFmpeg and mpv
+# AUR (Arch Linux): includes FFmpeg, mpv and poppler
 yay -S peep-tui-bin
 # or: paru -S peep-tui-bin
 ```
 
-For npm installs, `peep setup` checks FFmpeg, ffprobe, and mpv; shows the
+For npm installs, `peep setup` checks FFmpeg, ffprobe, mpv, and the poppler
+tools used for PDF preview (`pdfinfo`, `pdftoppm`, `pdftotext`); shows the
 Homebrew/apt-get/dnf/pacman command; and asks before running it. Enter or `n`
-cancels. Existing tools are left alone when all three are present. Setup only
+cancels. Nothing is installed when all of them are present. Setup only
 installs dependencies and does not relocate or reinstall peep. Use
 `peep setup --yes` for unattended setup. Linux may request sudo authentication.
 If no supported package manager is available, setup explains what is missing.
 
-Alternatively, install the media tools manually:
+Alternatively, install the tools manually:
 
 ```sh
-brew install ffmpeg mpv               # macOS / Homebrew Linux
-sudo apt install ffmpeg mpv           # Debian / Ubuntu
-sudo pacman -S ffmpeg mpv             # Arch Linux
+brew install ffmpeg mpv poppler                   # macOS / Homebrew Linux
+sudo apt install ffmpeg mpv poppler-utils         # Debian / Ubuntu
+sudo dnf install ffmpeg mpv poppler-utils         # Fedora
+sudo pacman -S ffmpeg mpv poppler                 # Arch Linux
 ```
+
+Without poppler, everything except PDF preview works; a selected PDF says that
+PDF preview needs poppler.
 
 ### Optional desktop sharing tools
 
@@ -47,7 +52,7 @@ sudo pacman -S wl-clipboard xclip dragon         # Arch Linux
 For the Linux drag helper, see [ripdrag](https://github.com/nik012003/ripdrag) or
 [dragon](https://github.com/mwh/dragon) for installation on your distribution. Clipboard and
 drag actions require a local graphical session; they do not transfer files from
-an SSH host. `peep setup` handles media dependencies only.
+an SSH host. `peep setup` handles media and PDF dependencies only.
 
 Upgrade through the same package manager. Use `command -v peep` to check which
 installation your shell runs if you have installed peep through multiple methods.
@@ -59,7 +64,7 @@ peep                   # Browse the current directory
 peep ~/Pictures        # Browse a directory
 peep README.md         # Preview a file
 peep --play movie.mp4   # Start media playback
-peep --doctor          # Check media dependencies and terminal support
+peep --doctor          # Check media and PDF dependencies and terminal support
 ```
 
 `peep <path>` accepts a file or directory. Quote paths containing spaces, for example
@@ -72,7 +77,7 @@ Download the archive for your OS and architecture from
 its SHA-256 against `checksums.txt`. From the extracted archive:
 
 ```sh
-./bin/peep --install                  # defaults to ~/.local; installs missing media tools
+./bin/peep --install                  # defaults to ~/.local; installs missing media and PDF tools
 ./bin/peep --install --prefix /your/prefix
 ./bin/peep --install --no-deps         # offline/managed hosts: skip media dependency setup
 ~/.local/bin/peep --doctor

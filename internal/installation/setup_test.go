@@ -37,7 +37,7 @@ func TestSetupConfirmationAndVerification(t *testing.T) {
 			if (installed == nil) != want {
 				t.Fatalf("unexpected install for %q: %s", answer, out.String())
 			}
-			if !strings.Contains(out.String(), "Missing media tools") || !strings.Contains(out.String(), "[y/N]") {
+			if !strings.Contains(out.String(), "Missing preview tools") || !strings.Contains(out.String(), "[y/N]") {
 				t.Fatal(out.String())
 			}
 		})

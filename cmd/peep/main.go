@@ -36,8 +36,8 @@ func run() error {
 	fps := flags.Int("fps", 12, "video/GIF target FPS (1–60; F changes it during playback)")
 	play := flags.Bool("play", false, "start playback explicitly")
 	read0 := flags.Bool("read0", false, "read NUL-separated paths from stdin (default: newline-separated)")
-	doctor := flags.Bool("doctor", false, "report media dependencies")
-	install := flags.Bool("install", false, "install this executable and missing media dependencies")
+	doctor := flags.Bool("doctor", false, "report media and PDF dependencies")
+	install := flags.Bool("install", false, "install this executable and missing media and PDF dependencies")
 	prefix := flags.String("prefix", "", "installation prefix (default ~/.local)")
 	binDir := flags.String("bin-dir", "", "install executable in this directory (default <prefix>/bin)")
 	noDeps := flags.Bool("no-deps", false, "skip media dependency setup during --install")
@@ -107,7 +107,7 @@ func run() error {
 			mode = "auto (capability probe at startup)"
 		}
 		fmt.Println("peep", buildVersion(), "· image/video renderer:", mode)
-		for _, name := range []string{"ffmpeg", "ffprobe", "mpv"} {
+		for _, name := range installation.Tools {
 			path, err := exec.LookPath(name)
 			if err != nil {
 				fmt.Println(name + ": MISSING")
@@ -118,7 +118,7 @@ func run() error {
 		}
 		fmt.Printf("Mermaid: built in (mmdg %s; embedded fonts)\n", diagram.Version)
 		if missing {
-			return fmt.Errorf("run peep setup to install missing media tools")
+			return fmt.Errorf("run peep setup to install missing media and PDF tools")
 		}
 		return nil
 	}

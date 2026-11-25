@@ -201,9 +201,10 @@ func TestDependencyPlans(t *testing.T) {
 		tools    []string
 		want     []string
 	}{
-		{"darwin", false, []string{"brew"}, []string{"/tools/brew", "install", "ffmpeg", "mpv"}},
-		{"linux", false, []string{"apt-get", "sudo"}, []string{"/tools/sudo", "/tools/apt-get", "install", "-y", "ffmpeg", "mpv"}},
-		{"linux", true, []string{"pacman"}, []string{"/tools/pacman", "-S", "--needed", "--noconfirm", "ffmpeg", "mpv"}},
+		{"darwin", false, []string{"brew"}, []string{"/tools/brew", "install", "ffmpeg", "mpv", "poppler"}},
+		{"linux", false, []string{"apt-get", "sudo"}, []string{"/tools/sudo", "/tools/apt-get", "install", "-y", "ffmpeg", "mpv", "poppler-utils"}},
+		{"linux", true, []string{"dnf"}, []string{"/tools/dnf", "install", "-y", "ffmpeg", "mpv", "poppler-utils"}},
+		{"linux", true, []string{"pacman"}, []string{"/tools/pacman", "-S", "--needed", "--noconfirm", "ffmpeg", "mpv", "poppler"}},
 	} {
 		lookup := func(name string) (string, error) {
 			for _, tool := range tc.tools {

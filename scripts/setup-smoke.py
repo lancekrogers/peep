@@ -12,7 +12,7 @@ with tempfile.TemporaryDirectory(prefix='peep-setup-') as temp:
     folder = Path(temp)
     manager = '#!' + sys.executable + '\nimport os,json,sys\nfrom pathlib import Path\n'
     manager += "p=Path(os.environ['PEEP_SETUP_FIXTURE']); (p/'invocation').write_text(json.dumps(sys.argv[1:]))\n"
-    manager += "for name in ('ffmpeg','ffprobe','mpv'):\n f=p/name; f.write_text('#!/bin/sh\\nexit 0\\n'); f.chmod(0o700)\n"
+    manager += "for name in ('ffmpeg','ffprobe','mpv','pdfinfo','pdftoppm','pdftotext'):\n f=p/name; f.write_text('#!/bin/sh\\nexit 0\\n'); f.chmod(0o700)\n"
     for name in ('brew','apt-get','dnf','pacman','sudo'):
         tool = folder / name
         tool.write_text(manager)
@@ -26,13 +26,13 @@ with tempfile.TemporaryDirectory(prefix='peep-setup-') as temp:
         assert result.returncode == 0 and 'cancelled' in result.stdout, result
         assert not (folder/'invocation').exists()
     result = setup(answer='yes\n')
-    assert result.returncode == 0 and 'Media tools are ready' in result.stdout, result
+    assert result.returncode == 0 and 'Preview tools are ready' in result.stdout, result
     assert (folder/'invocation').exists()
     (folder/'invocation').unlink()
     result = setup()
     assert result.returncode == 0 and '[y/N]' not in result.stdout, result
     assert not (folder/'invocation').exists()
-    for name in ('ffmpeg','ffprobe','mpv'): (folder/name).unlink()
+    for name in ('ffmpeg','ffprobe','mpv','pdfinfo','pdftoppm','pdftotext'): (folder/name).unlink()
     result = setup(('--yes',))
     assert result.returncode == 0 and '[y/N]' not in result.stdout, result
     assert (folder/'invocation').exists()

@@ -14,9 +14,9 @@ import (
 
 func setup(args []string) error {
 	flags := flag.NewFlagSet("peep setup", flag.ContinueOnError)
-	yes := flags.Bool("yes", false, "install missing media tools without asking")
+	yes := flags.Bool("yes", false, "install missing media and PDF tools without asking")
 	flags.Usage = func() {
-		fmt.Fprintln(flags.Output(), "Usage: peep setup [--yes]\n\nInstall missing FFmpeg and mpv using Homebrew, apt-get, dnf, or pacman.\nPeep itself is not reinstalled. Use peep ./setup to open a path named setup.")
+		fmt.Fprintln(flags.Output(), "Usage: peep setup [--yes]\n\nInstall missing FFmpeg, mpv and poppler (PDF preview) using Homebrew, apt-get, dnf, or pacman.\nPeep itself is not reinstalled. Use peep ./setup to open a path named setup.")
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(args); err != nil {

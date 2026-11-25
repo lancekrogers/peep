@@ -94,8 +94,9 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv ripgrep
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv ripgrep poppler-utils
       - run: go build -o bin/peep ./cmd/peep
+      - run: PEEP_INTEGRATION=1 go test -race -count=1 ./internal/document
       - run: python3 scripts/video-playback-smoke.py
       - run: python3 scripts/stdin-smoke.py
       - run: bash scripts/fixtures.sh && python3 scripts/iterm-preview-smoke.py

@@ -48,15 +48,16 @@ yay -S peep-tui-bin
 # or: paru -S peep-tui-bin
 ```
 
-Homebrew and AUR install FFmpeg and mpv for media playback. With npm, `peep setup`
-offers to install missing media tools through your package manager. Mermaid is built in.
+Homebrew and AUR install FFmpeg and mpv for media playback and poppler for PDF
+preview. With npm, `peep setup` offers to install missing tools through your
+package manager. Mermaid is built in.
 
 ```sh
 peep              # Browse the current directory
 peep ~/Pictures   # Browse a directory (peep <path>)
 peep README.md     # Preview a file
 rg -l "TODO" | peep # Browse files matching a content search
-peep --doctor     # Check media dependencies and terminal support
+peep --doctor     # Check media and PDF dependencies and terminal support
 ```
 
 [Installation details and release archives →](docs/install.md)
@@ -64,7 +65,7 @@ peep --doctor     # Check media dependencies and terminal support
 <details>
 <summary>Install from source</summary>
 
-Requires **Go 1.27+** and **just**. `just install` sets up missing media tools
+Requires **Go 1.27+** and **just**. `just install` sets up missing media and PDF tools
 through your supported package manager and upgrades an active legacy Go-bin copy.
 Follow the installer's PATH guidance if needed.
 
