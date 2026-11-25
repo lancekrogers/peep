@@ -94,6 +94,30 @@ This opens a disposable copy—safe for showing rename, move, and delete.
 The curated files are also ready to browse in [`examples/night-shift`](examples/night-shift).
 [Demo walkthrough](docs/demo.md) · [Media credits and sources](examples/night-shift/CREDITS.md)
 
+## Read PDFs
+
+Select a PDF to preview it, and press Enter to read it. In a Kitty-graphics terminal
+each page is a real image at the width of the pane.
+
+<p align="center">
+  <img src="docs/assets/pdf-page-1.jpg" width="49%" alt="Page 1 of the Bitcoin paper previewed beside the file list in peep">
+  <img src="docs/assets/pdf-page-5.jpg" width="49%" alt="Page 5 of the Bitcoin paper in peep, with its diagrams drawn as an image">
+</p>
+
+*The Bitcoin paper from [`examples/papers`](examples/papers), in Ghostty.*
+
+```sh
+peep examples/papers/bitcoin.pdf
+```
+
+- **Scroll** with `j`/`k`, Page Up/Down, or the mouse wheel. Scrolling past the end of a page continues on the next.
+- **Turn pages** with `←`/`→`, or jump with `5G`.
+- **Switch to text** with `R`, then search the page with `/`.
+
+Terminals without native graphics show each page's text instead. PDF viewing uses
+poppler, which Homebrew and AUR install with peep; with npm, run `peep setup`.
+[PDF guide →](docs/usage.md#pdf-previews)
+
 ## The essentials
 
 | Key | Action |
