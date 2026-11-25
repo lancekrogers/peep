@@ -363,7 +363,8 @@ func rasterSize(g pageGeometry, boxWidth, boxHeight int) (int, int) {
 		w, h = h, w
 	}
 	scale := min(float64(boxWidth)/w, float64(boxHeight)/h, 4096/w, 4096/h, math.Sqrt(float64(8<<20)/(w*h)))
-	rw, rh := min(4096, max(1, int(w*scale))), min(4096, max(1, int(h*scale)))
+	// The epsilon keeps a side that exactly meets the box from flooring one pixel short.
+	rw, rh := min(4096, max(1, int(w*scale+1e-6))), min(4096, max(1, int(h*scale+1e-6)))
 	for rw*rh > 8<<20 {
 		if rw > rh {
 			rw--
@@ -397,15 +398,34 @@ func runPoppler(ctx context.Context, stdout io.Writer, tool string, args ...stri
 	child, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(child, path, args...)
+	out := &writeFailure{Writer: stdout}
 	stderr := &cappedOutput{limit: 4096}
-	cmd.Stdout, cmd.Stderr, cmd.WaitDelay = stdout, stderr, time.Second
+	cmd.Stdout, cmd.Stderr, cmd.WaitDelay = out, stderr, time.Second
 	if err := cmd.Run(); err != nil {
 		if child.Err() != nil {
 			return fmt.Errorf("%s: %w", tool, child.Err())
 		}
+		if out.err != nil {
+			return fmt.Errorf("%s: %w", tool, out.err)
+		}
 		return popplerError(tool, err, stderr.String())
 	}
 	return nil
+}
+
+// writeFailure remembers why stdout stopped accepting output, which otherwise
+// surfaces only as the child's broken pipe.
+type writeFailure struct {
+	io.Writer
+	err error
+}
+
+func (w *writeFailure) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	if w.err == nil {
+		w.err = err
+	}
+	return n, err
 }
 
 func popplerError(tool string, err error, stderr string) error {

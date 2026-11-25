@@ -23,8 +23,10 @@ import (
 	"time"
 )
 
-const letterInfo = `Title:           Pages: 999
-Producer:        Page    1 size:  1 x 1 pts
+const letterInfo = `Title:           decoy
+Pages:           999
+Page    1 size:  1 x 1 pts
+Page    1 rot:   180
 Pages:           3
 Encrypted:       no
 Page    1 size:  612 x 792 pts (letter)
@@ -122,6 +124,16 @@ func TestPDFRasterSize(t *testing.T) {
 		w, h := rasterSize(c.g, c.boxW, c.boxH)
 		if w != c.wantW || h != c.wantH || w*h > 8<<20 {
 			t.Errorf("%s: %dx%d, want %dx%d", c.name, w, h, c.wantW, c.wantH)
+		}
+	}
+	for _, g := range []pageGeometry{{612, 792, 0}, {595.276, 841.89, 90}} {
+		for box := 1; box <= 2000; box++ {
+			if w, _ := rasterSize(g, box, 1<<20); w != box {
+				t.Fatalf("%v in a %d px wide box is %d px wide", g, box, w)
+			}
+			if _, h := rasterSize(g, 1<<20, box); h != box {
+				t.Fatalf("%v in a %d px tall box is %d px tall", g, box, h)
+			}
 		}
 	}
 }
@@ -402,6 +414,10 @@ func TestPDFPoppler(t *testing.T) {
 	cached := len(p.pages)
 	if _, err := p.Page(ctx, changed, 1, 40, 20, 400, 400); !errors.Is(err, ErrPDFChanged) || len(p.pages) != cached {
 		t.Fatal("render of a swapped file was cached", err)
+	}
+
+	if err := runPoppler(ctx, &limitedOutput{limit: 64}, "pdftoppm", "-png", "-singlefile", path); err == nil || !strings.Contains(err.Error(), "output limit exceeded") {
+		t.Fatal("oversized render not reported as such", err)
 	}
 
 	locked := filepath.Join(filepath.Dir(path), "locked.pdf")
