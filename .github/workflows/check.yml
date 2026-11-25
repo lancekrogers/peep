@@ -94,8 +94,11 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv ripgrep
+      # fontconfig builds the system font cache; without it poppler's fontconfig writes one under XDG_CACHE_HOME.
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg mpv ripgrep poppler-utils fontconfig
       - run: go build -o bin/peep ./cmd/peep
+      - run: PEEP_INTEGRATION=1 go test -race -count=1 ./internal/document
+      - run: python3 scripts/pdf-smoke.py
       - run: python3 scripts/video-playback-smoke.py
       - run: python3 scripts/stdin-smoke.py
       - run: bash scripts/fixtures.sh && python3 scripts/iterm-preview-smoke.py

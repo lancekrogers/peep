@@ -19,6 +19,11 @@ type documentMsg struct {
 
 func (m *Model) clearDocument() {
 	m.cancelDocumentImages()
+	m.cancelPDFPrefetch()
+	if m.pdf != nil {
+		m.clearPDFNotice()
+	}
+	m.pdf = nil
 	m.docImages = nil
 	m.doc = nil
 	m.docLayout = document.Layout{}
@@ -41,6 +46,9 @@ func (m *Model) documentAnchor() int {
 	return lines[min(m.docOffset, len(lines)-1)].SourceLine
 }
 func (m *Model) readDocument(path string) tea.Cmd {
+	if document.Kind(path) == "PDF" {
+		return m.openPDF(path, false)
+	}
 	id, width := m.previewID, m.documentWidth()
 	ctx, cancel := context.WithTimeout(m.ctx, 10*time.Second)
 	m.previewCancel = cancel
@@ -57,6 +65,9 @@ func (m *Model) readDocument(path string) tea.Cmd {
 func (m *Model) reflowDocument() tea.Cmd {
 	if m.doc == nil {
 		return nil
+	}
+	if m.pdf != nil {
+		return m.showPDFPage(pdfStay)
 	}
 	m.cancelDocumentImages()
 	if m.previewCancel != nil {
@@ -84,6 +95,9 @@ func (m *Model) applyDocument(v documentMsg) {
 func (m *Model) scrollDocument(delta int) {
 	lines, _ := m.documentComposition()
 	m.docOffset = max(0, min(max(0, len(lines)-m.layout().body), m.docOffset+delta))
+	if m.pdf != nil && delta != 0 {
+		m.pdf.land = pdfStay
+	}
 }
 func (m *Model) documentRows(w, h int) []string {
 	lines, _ := m.documentComposition()
@@ -98,6 +112,9 @@ func (m *Model) documentRows(w, h int) []string {
 	return rows
 }
 func (m *Model) documentTitle() string {
+	if m.pdf != nil {
+		return m.pdfTitle()
+	}
 	mode := "Text"
 	if m.doc.Kind == "MMD" {
 		mode = "Mermaid"

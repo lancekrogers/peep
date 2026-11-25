@@ -83,7 +83,7 @@ jobs:
           if test -n "$existing"; then
             echo "Homebrew update already has a pull request: $existing"
           else
-            existing=$(gh pr create --repo lancekrogers/homebrew-tap --head "peep-$VERSION" --title "peep $VERSION" --body "Install peep $VERSION from verified release archives. Includes embedded Mermaid and media dependencies.")
+            existing=$(gh pr create --repo lancekrogers/homebrew-tap --head "peep-$VERSION" --title "peep $VERSION" --body "Install peep $VERSION from verified release archives. Includes embedded Mermaid plus media and PDF dependencies.")
           fi
           # Only the generated formula is updated; retain the PR as release history.
           gh pr merge "$existing" --repo lancekrogers/homebrew-tap --squash --delete-branch

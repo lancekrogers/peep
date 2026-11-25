@@ -312,6 +312,9 @@ func (m *Model) View() string {
 	}
 	if m.doc != nil {
 		status = "Enter/f read · PgUp/PgDn scroll · R source/rendered · Esc back"
+		if m.pdf != nil {
+			status = "Enter/f read · PgUp/PgDn scroll and turn pages · R text/picture · Esc back"
+		}
 	}
 	if m.filter != "" || m.filtering {
 		status = "Filter: " + render.Safe(m.filter)
@@ -352,6 +355,9 @@ func (m *Model) View() string {
 	shortcuts := "f focus   B browser only   S sort   ? all controls"
 	if m.doc != nil && m.focus {
 		navigation = "↑↓ / j/k scroll   PgUp/PgDn page   Home/End jump   Esc back   / find"
+		if m.pdf != nil {
+			navigation = "↑↓ / j/k scroll   ←/→ page   12G go to page   R text/picture   Esc back   / find"
+		}
 	}
 	if m.transportVisible() {
 		shortcuts = "f focus   B browser only   S sort   Q queue   t timeline   , seek step   { / } 30s   ? all controls"

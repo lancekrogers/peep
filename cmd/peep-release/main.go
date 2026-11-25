@@ -253,6 +253,7 @@ func formula(m metadata, v, url string, sums map[string]string) string {
 	}
 	b.WriteString(`  depends_on "ffmpeg"
   depends_on "mpv"
+  depends_on "poppler"
 
   def install
     bin.install "bin/peep"
@@ -277,7 +278,7 @@ pkgdesc='Terminal file explorer with media, Markdown and Mermaid previews'
 arch=('x86_64' 'aarch64')
 url='https://github.com/%s'
 license=('%s')
-depends=('ffmpeg' 'mpv')
+depends=('ffmpeg' 'mpv' 'poppler')
 conflicts=('peep' 'peep-bin' 'peep-tui')
 options=('!strip')
 source_x86_64=('%speep_%s_linux_amd64.tar.gz')
@@ -304,6 +305,7 @@ func srcinfo(m metadata, v, url string, sums map[string]string) string {
 	license = %s
 	depends = ffmpeg
 	depends = mpv
+	depends = poppler
 	conflicts = peep
 	conflicts = peep-bin
 	conflicts = peep-tui

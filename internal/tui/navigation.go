@@ -69,6 +69,9 @@ func (m *Model) navigationKey(key string) (bool, tea.Cmd) {
 		return false, nil
 	}
 	if m.doc != nil && !m.showQueue && (m.focus || key == "pgdown" || key == "pgup") {
+		if m.pdf != nil {
+			return true, m.pdfNavigate(key, count, delta, absolute)
+		}
 		if absolute {
 			m.docOffset = target
 		}

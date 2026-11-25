@@ -14,7 +14,7 @@ This deliberately trades duplicate video decoding for a simple, isolated bootstr
 
 Resource limits: 10-second metadata probe, 10-second file-load deadline, 3-second IPC commands, two queued frames, 120 x 100 maximum cell decode size; native PNG limits are described below. Selection, resize, seek, and exit cancel obsolete decoder processes. Preview IDs reject late results. Filename extensions select candidate media types; FFprobe validates actual streams before playback.
 
-Media dependencies remain external installations. Mermaid and its fonts are compiled into peep. The Go executable cross-compiles with CGO disabled; mpv/FFmpeg and a suitable terminal are required for media on the destination. Windows IPC is not implemented.
+Media and PDF dependencies remain external installations. Mermaid and its fonts are compiled into peep. The Go executable cross-compiles with CGO disabled; mpv/FFmpeg and a suitable terminal are required for media on the destination, and poppler for PDF preview. Windows IPC is not implemented.
 
 Future graphics backends must preserve a single terminal writer, cancellation, bounded buffering, and the preview-versus-playback distinction. The broader campaign design remains the product direction; README.md documents what this bootstrap actually implements.
 
@@ -57,6 +57,16 @@ Parsed image references resolve relative to the document. Only local regular fil
 The mmdg v0.13.0 Go library is compiled into peep, including its fonts; Go 1.27+ is required to build. `internal/diagram` calls `RenderContext`, normalizes the root SVG viewport to fit within 1600 pixels, then calls `SVGToPNG`. The raster API has no context parameter, so `internal/document.Mermaid` starts a private worker mode of the same peep executable. It resolves the executable once and never looks up a renderer on PATH. Worker stdout is exclusively PNG data; only Bubble Tea writes terminal output.
 
 Source is limited to 128 KiB, intermediate SVG to 8 MiB, stdout to 20 MiB, stderr to 4 KiB, and execution to an eight-second parent deadline. Context cancellation kills the worker, including rasterization. The five-second library context bounds layout. A per-application cache holds at most 16 PNGs/32 MiB, keyed by source, executable identity, theme/size, and date. Existing document generation and pixel limits still apply. Invalid diagrams and cell-only clients retain source.
+
+## PDF preview
+
+`internal/document.PDF` runs poppler's `pdfinfo`, `pdftoppm` and `pdftotext`, found on PATH, with arguments passed directly and an absolute file path. Each run has a ten-second deadline and a one-second wait delay; cancellation kills the child. Stdout is capped at 20 MiB for PNGs and 1 MiB for `pdfinfo`. Page text is truncated at 2 MiB. Stderr keeps its first 4 KiB, so poppler warnings cannot fail a render. Files open through the same nonblocking regular-file check as text documents.
+
+A PDF is identified by the SHA-256 of its contents and its page count. A memo of 32 paths skips re-hashing while device, inode, size and nanosecond mtime are unchanged; a changed stat re-hashes, and pages of a path's previous content are dropped. Page and text requests re-stat the file before and after poppler runs. A mismatch returns `ErrPDFChanged` and discards the result, so a render that straddles a change is never cached. The TUI then reopens the file, keeps the page number clamped to the new page count, and shows a notice.
+
+Pages fit the pane width. Columns come from the pane, rows from the page's crop-box aspect ratio and rotation, capped at 512 rows (a taller page narrows instead). The raster is columns × the terminal's cell width in pixels, read with `TIOCGWINSZ` on the output terminal; an unreported pixel size assumes 10 × 20 pixel cells, and the cell renderer requests 1 × 2 so poppler antialiases directly to half-block samples. Raster size is bounded to 4096 pixels per side and 8 Mi pixels before `pdftoppm` allocates it. Native placements send poppler's PNG unchanged and crop it to the viewport like other document images.
+
+Rendered pages live in an application-lifetime memory cache keyed by content hash, page and raster size: at most 24 pages and 64 MiB, least recently used first. Page sizes from `pdfinfo` are memoized per content hash. After a page picture is shown, the next page in the reading direction renders into the cache in the background, one at a time, cancelled when the document is cleared. Text view runs `pdftotext -layout` and sanitizes the result like text files. Peep writes no PDF data to disk: no cache files, temporary files or directories.
 
 ## Installation and archives
 

@@ -28,6 +28,8 @@ func Kind(path string) string {
 		return "MD"
 	case ".mmd", ".mermaid":
 		return "MMD"
+	case ".pdf":
+		return "PDF"
 	case ".txt", ".log", ".go", ".rs", ".zig", ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".yaml", ".yml", ".toml", ".sh", ".c", ".h", ".cpp", ".css", ".html", ".xml", ".csv", ".ini", ".conf":
 		return "TEXT"
 	}
@@ -81,11 +83,7 @@ func Read(ctx context.Context, path string) (*Document, error) {
 	data := b.Bytes()
 	truncated := len(data) > MaxBytes
 	if truncated {
-		data = data[:MaxBytes]
-		// At most three trailing bytes can belong to an incomplete UTF-8 rune.
-		for trim := 0; trim < 3 && len(data) > 0 && !utf8.Valid(data); trim++ {
-			data = data[:len(data)-1]
-		}
+		data = trimPartialRune(data[:MaxBytes])
 	}
 	if bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data) {
 		st, _ := f.Stat()
@@ -95,12 +93,24 @@ func Read(ctx context.Context, path string) (*Document, error) {
 		}
 		return nil, fmt.Errorf("binary or non-UTF-8 file · %d bytes · text preview unavailable", size)
 	}
-	source := strings.ReplaceAll(string(data), "\r\n", "\n")
-	source = strings.Map(func(r rune) rune {
+	return &Document{Path: path, Source: cleanText(string(data)), Kind: Kind(path), Truncated: truncated}, nil
+}
+
+// trimPartialRune drops an incomplete UTF-8 rune left by truncation; at most
+// three trailing bytes can belong to one.
+func trimPartialRune(data []byte) []byte {
+	for trim := 0; trim < 3 && len(data) > 0 && !utf8.Valid(data); trim++ {
+		data = data[:len(data)-1]
+	}
+	return data
+}
+
+// cleanText normalizes line endings and replaces terminal control and format runes.
+func cleanText(s string) string {
+	return strings.Map(func(r rune) rune {
 		if r != '\n' && r != '\t' && (unicode.IsControl(r) || unicode.In(r, unicode.Cf)) {
 			return '�'
 		}
 		return r
-	}, source)
-	return &Document{Path: path, Source: source, Kind: Kind(path), Truncated: truncated}, nil
+	}, strings.ReplaceAll(s, "\r\n", "\n"))
 }

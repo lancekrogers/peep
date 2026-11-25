@@ -19,6 +19,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		}
 		m.clearSpectrum()
 		m.cancelDocumentImages()
+		m.cancelPDFPrefetch()
 		if m.previewCancel != nil {
 			m.previewCancel()
 		}
@@ -82,12 +83,20 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.doc != nil && m.focus && !m.showQueue && !m.timeline {
 		switch key {
 		case "/", "ctrl+f":
+			if m.pdfPicture() {
+				m.notice = pdfSearchNotice
+				m.navCount, m.navG = 0, false
+				return nil
+			}
 			m.docSearch.editing = true
 			m.docSearch.origin = m.docOffset
 			m.navCount, m.navG = 0, false
 			return nil
 		case "n":
-			return m.nextDocumentMatch(1)
+			// A PDF reader keeps n for the next track until there is a search.
+			if m.pdf == nil || m.docSearch.query != "" {
+				return m.nextDocumentMatch(1)
+			}
 		case "N":
 			return m.nextDocumentMatch(-1)
 		}
@@ -118,16 +127,35 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 	if m.doc != nil && !m.showQueue {
 		switch key {
 		case "R":
+			if m.pdf != nil {
+				m.clearPDFNotice()
+				m.pdf.toggled = !m.pdf.toggled
+				return m.showPDFPage(pdfTop)
+			}
 			if m.doc.Kind == "MD" || m.doc.Kind == "MMD" {
 				m.docSource = !m.docSource
 				return m.reflowDocument()
 			}
 		case "pgdown":
+			if m.pdf != nil {
+				return m.pdfNavigate(key, 0, m.layout().body-1, false)
+			}
 			m.scrollDocument(m.layout().body - 1)
 			return m.requestDocumentImages()
 		case "pgup":
+			if m.pdf != nil {
+				return m.pdfNavigate(key, 0, 1-m.layout().body, false)
+			}
 			m.scrollDocument(1 - m.layout().body)
 			return m.requestDocumentImages()
+		}
+		if m.focus && !m.timeline && m.pdf != nil {
+			switch key {
+			case "right", "l":
+				return m.pdfTurn(1, pdfTop)
+			case "left", "h":
+				return m.pdfTurn(-1, pdfTop)
+			}
 		}
 		if m.focus && !m.timeline {
 			switch key {

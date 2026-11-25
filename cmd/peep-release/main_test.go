@@ -80,6 +80,11 @@ func TestGenerate(t *testing.T) {
 			t.Fatal("binary not executable")
 		}
 	}
+	for file, want := range map[string]string{"homebrew/peep.rb": `depends_on "poppler"`, "aur/PKGBUILD": "depends=('ffmpeg' 'mpv' 'poppler')", "aur/.SRCINFO": "\tdepends = poppler\n"} {
+		if b, err := os.ReadFile(filepath.Join("out", file)); err != nil || !strings.Contains(string(b), want) {
+			t.Fatalf("%s lacks the PDF preview dependency: %v", file, err)
+		}
+	}
 	if _, err = os.Stat(filepath.Join(root, "escape")); !os.IsNotExist(err) {
 		t.Fatal("unexpected extracted path")
 	}

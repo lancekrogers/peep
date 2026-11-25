@@ -14,7 +14,9 @@ Integration fixtures and terminal transcripts are generated under ignored `tmp/`
 
 `just test-explorer`, `just test-file-operations`, `just test-mermaid`, `just test-demo`, and `just test-package` run focused acceptance checks. Python is used only by terminal/package test harnesses; peep, its installer, and its renderer are Go.
 
-The optional `just demo-assets` authoring recipe regenerates original demo art, music, and motion; see [credits and sources](../examples/night-shift/CREDITS.md).
+The optional `just demo-assets` authoring recipe regenerates original demo art, the field-log PDF, music, and motion; see [credits and sources](../examples/night-shift/CREDITS.md).
+
+`just test-pdf` drives PDF preview in a PTY with real poppler; it is also part of `just test-tui`. The maintainer-only `just demo-pdf` records `docs/assets/pdf-preview.gif` from `demos/pdf.tape` and needs [VHS](https://github.com/charmbracelet/vhs) and poppler. VHS does not draw Kitty graphics, so the tape records `--renderer=cells` against a disposable copy of the demo collection under `tmp/`.
 
 Use feature branches and ready-for-review pull requests. Do not commit generated test fixtures, binaries, or terminal transcripts. Curated demo media in `examples/night-shift` is intentionally versioned.
 

@@ -29,7 +29,11 @@ browser and media room. Avoid forcing `--renderer=kitty` on an unsupported clien
    try `/*.go`. Enter keeps a filter; Escape clears it. `S`, then `m` sorts by
    modification date; `S`, then `r` reverses it. In `01-images`, the disposable
    copy has deliberately different modification dates.
-7. **Finish with file operations.** Stop playback with `s`. On a sample in the disposable copy, show
+7. **Read the field log.** Open `07-documents` and select `night-log.pdf`. Press
+   Enter to read it, then `→` / `←` to turn its three pages. `R` switches between
+   the page picture and its text; in text, search `/antenna`. `3G` jumps to the
+   last page. PDF preview needs poppler (`peep setup`).
+8. **Finish with file operations.** Stop playback with `s`. On a sample in the disposable copy, show
    Ctrl+R rename or `M` move. `d` opens a compact confirmation; `n` cancels and
    `y` deletes. A fresh `just demo` restores the collection for another take.
 
@@ -43,6 +47,7 @@ browser and media room. Avoid forcing `--renderer=kitty` on an unsupported clien
 | Two synthetic-narration M4B chapters and transcripts | `04-audiobook/` |
 | Flowchart, sequence, and class diagrams | `05-diagrams/` |
 | Go, JSON, and YAML syntax examples | `06-code/` |
+| Three-page PDF field log with searchable text | `07-documents/` |
 | Markdown with inline/reference images, Mermaid, tables, and code | `00-start-here.md` |
 | Symlink and hidden-file browsing | `field-guide-link.md`, `images-link`, `.hidden-field-note.txt` |
 
@@ -53,7 +58,7 @@ not photography. See the [credits](../examples/night-shift/CREDITS.md).
 
 ## Authoring assets
 
-`just demo-assets` rebuilds artwork, music, cover art, video, and GIF using Go,
+`just demo-assets` rebuilds artwork, the field-log PDF, music, cover art, video, and GIF using Go,
 FFmpeg, and `rsvg-convert`. Set `NARRATE=1` on macOS to regenerate the audiobook
 with `say`. Those tools are for maintainers; the committed collection is already
 playable. No authoring step is part of a normal build or install.

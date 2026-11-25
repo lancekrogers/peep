@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"image"
 	"image/png"
 	"math"
 	"net/url"
@@ -58,31 +59,53 @@ func ReadImage(ctx context.Context, path string, columns int) (Image, error) {
 	return ImageFromPNG(data, columns)
 }
 func ImageFromPNG(data []byte, columns int) (Image, error) {
+	im, err := decodePNG(data)
+	if err != nil {
+		return Image{}, err
+	}
+	cols, rows := FitImage(im.Bounds().Dx(), im.Bounds().Dy(), columns)
+	return cellImage(data, im, cols, rows), nil
+}
+
+// gridImage samples the PNG into exactly columns × rows cells.
+func gridImage(data []byte, columns, rows int) (Image, error) {
+	im, err := decodePNG(data)
+	if err != nil {
+		return Image{}, err
+	}
+	return cellImage(data, im, columns, rows), nil
+}
+
+func decodePNG(data []byte) (image.Image, error) {
 	if len(data) > 20<<20 {
-		return Image{}, fmt.Errorf("document image exceeds 20 MiB")
+		return nil, fmt.Errorf("document image exceeds 20 MiB")
 	}
 	cfg, err := png.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return Image{}, fmt.Errorf("image metadata: %w", err)
+		return nil, fmt.Errorf("image metadata: %w", err)
 	}
 	if cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 4096 || cfg.Height > 4096 || int64(cfg.Width)*int64(cfg.Height) > 8<<20 {
-		return Image{}, fmt.Errorf("image exceeds document pixel limit")
+		return nil, fmt.Errorf("image exceeds document pixel limit")
 	}
 	im, err := png.Decode(bytes.NewReader(data))
 	if err != nil {
-		return Image{}, fmt.Errorf("decode document image: %w", err)
+		return nil, fmt.Errorf("decode document image: %w", err)
 	}
-	cols, rows := FitImage(cfg.Width, cfg.Height, columns)
+	return im, nil
+}
+
+func cellImage(data []byte, im image.Image, cols, rows int) Image {
+	b := im.Bounds()
 	f := media.Frame{Width: cols, Height: rows * 2, RGB: make([]byte, cols*rows*6)}
 	for y := 0; y < f.Height; y++ {
 		for x := 0; x < cols; x++ {
-			r, g, b, a := im.At(x*cfg.Width/cols, y*cfg.Height/f.Height).RGBA()
+			r, g, bl, a := im.At(b.Min.X+x*b.Dx()/cols, b.Min.Y+y*b.Dy()/f.Height).RGBA()
 			at := (y*cols + x) * 3
 			// Composite transparency onto the document panel background.
 			f.RGB[at] = uint8((r + 23*(65535-a)/255) >> 8)
 			f.RGB[at+1] = uint8((g + 30*(65535-a)/255) >> 8)
-			f.RGB[at+2] = uint8((b + 45*(65535-a)/255) >> 8)
+			f.RGB[at+2] = uint8((bl + 45*(65535-a)/255) >> 8)
 		}
 	}
-	return Image{PNG: data, Width: cfg.Width, Height: cfg.Height, Columns: cols, Rows: rows, Cells: render.Cells(f)}, nil
+	return Image{PNG: data, Width: b.Dx(), Height: b.Dy(), Columns: cols, Rows: rows, Cells: render.Cells(f)}
 }
