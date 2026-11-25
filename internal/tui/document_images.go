@@ -191,6 +191,7 @@ func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 	if m.pdf != nil && errors.Is(v.err, document.ErrPDFChanged) {
 		return m.reloadPDF()
 	}
+	offset := m.docOffset
 	_, before := m.documentComposition()
 	m.docImageRevision++
 	entry := &documentImage{image: v.image, width: v.width, key: m.docImageRevision}
@@ -232,7 +233,7 @@ func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 	}
 	m.scrollDocument(0)
 	if m.pdf != nil {
-		return tea.Batch(m.pdfImageApplied(v), m.requestDocumentImages())
+		return tea.Batch(m.pdfImageApplied(v, offset), m.requestDocumentImages())
 	}
 	return m.requestDocumentImages()
 }

@@ -19,6 +19,7 @@ type fakePDF struct {
 	mu                sync.Mutex
 	pages, opens      int
 	rows              map[int]int
+	rowsPerColumn     bool
 	rendered          []int
 	cellW, cellH      int
 	openErr           error
@@ -54,6 +55,8 @@ func (f *fakePDF) Page(ctx context.Context, info document.PDFInfo, page, columns
 	rows := 40
 	if r, ok := f.rows[page]; ok {
 		rows = r
+	} else if f.rowsPerColumn {
+		rows = columns
 	}
 	cells := make([]string, rows)
 	for i := range cells {
@@ -381,5 +384,61 @@ func TestPDFOpenErrorAndKind(t *testing.T) {
 	}
 	if !strings.Contains(ansi.Strip(strings.Join(m.fileRows(60, 4, false), "\n")), "PDF") {
 		t.Fatal("PDF rows lack a kind badge")
+	}
+}
+
+func TestPDFNativePlacementAndReflow(t *testing.T) {
+	m, f := pdfModel(t, 3, true)
+	m.docOffset = 10
+	_, slots := m.documentComposition()
+	images := m.documentGraphics(40, 3)
+	if len(images) != 1 || images[0].Rect.Columns != slots[0].columns || images[0].Rect.Rows != m.layout().body || images[0].Y != 10*m.docImages[0].image.Height/slots[0].rows {
+		t.Fatalf("page placement %+v for slot %+v", images, slots)
+	}
+	f.rowsPerColumn = true
+	press(m, tea.KeyRight, tea.KeyLeft)
+	rows := m.docImages[0].image.Rows
+	m.docOffset = 40
+	press(m, tea.KeyEsc)
+	if narrower := m.docImages[0].image.Rows; narrower >= rows || m.docOffset != 40*narrower/rows {
+		t.Fatalf("reflow from %d to %d rows kept offset %d", rows, narrower, m.docOffset)
+	}
+}
+
+func TestPDFNoticesAndDefaultFlip(t *testing.T) {
+	m, _ := pdfModel(t, 3, false)
+	drain(m, update(m, tea.WindowSizeMsg{Width: 100, Height: 30}))
+	m.graphics = &render.KittyWriter{}
+	m.cellPixels = func() (int, int) { return 10, 20 }
+	drain(m, update(m, tea.WindowSizeMsg{Width: 100, Height: 30}))
+	if m.documentTitle() != "PDF · page 1/3" || m.pdf.toggled {
+		t.Fatalf("native graphics did not make the picture the default: %q", m.documentTitle())
+	}
+	typeRunes(m, "/")
+	typeRunes(m, "R")
+	if m.notice != "" || m.documentTitle() != "PDF text · page 1/3" {
+		t.Fatalf("search notice outlived R: %q", m.notice)
+	}
+	typeRunes(m, "R/")
+	m.focus = false
+	press(m, tea.KeyDown)
+	if m.notice != "" {
+		t.Fatal("search notice outlived the PDF")
+	}
+}
+
+func TestPDFSearchKeepsNAndTextReloads(t *testing.T) {
+	m, f := pdfModel(t, 3, false)
+	m.queue, m.index = []string{"a.png", "b.png"}, 0
+	typeRunes(m, "/needle")
+	press(m, tea.KeyEnter)
+	m.key(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	if m.index != 0 {
+		t.Fatal("n left the search for the queue")
+	}
+	f.changed, f.pagesAfterChange = true, 2
+	press(m, tea.KeyRight)
+	if f.opens != 2 || m.notice != pdfReloadedNotice || m.pdf.page != 2 || f.lastTextRequested != 2 {
+		t.Fatalf("text reload: opens %d page %d notice %q", f.opens, m.pdf.page, m.notice)
 	}
 }

@@ -128,6 +128,7 @@ func (m *Model) key(k tea.KeyMsg) tea.Cmd {
 		switch key {
 		case "R":
 			if m.pdf != nil {
+				m.clearPDFNotice()
 				m.pdf.toggled = !m.pdf.toggled
 				return m.showPDFPage(pdfTop)
 			}

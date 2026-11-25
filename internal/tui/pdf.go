@@ -37,6 +37,7 @@ type pdfView struct {
 	page, direction  int
 	toggled, loading bool
 	land             pdfLanding
+	reflowRows       int
 }
 
 type pdfOpenedMsg struct {
@@ -136,8 +137,12 @@ func (m *Model) showPDFPage(land pdfLanding) tea.Cmd {
 	p.land, p.loading = land, true
 	if m.pdfPicture() {
 		placeholder := &documentImage{}
+		p.reflowRows = 0
 		if previous := m.docImages[0]; m.doc != nil && m.doc.Kind == "PDF" && previous != nil {
 			placeholder.image = document.Image{Width: previous.image.Width, Height: previous.image.Height, Columns: previous.image.Columns, Rows: previous.image.Rows}
+			if land == pdfStay {
+				p.reflowRows = previous.image.Rows
+			}
 		}
 		m.doc = &document.Document{Path: p.path, Kind: "PDF"}
 		m.docLayout = document.Layout{Assets: []document.Asset{{Kind: "pdf", Alt: fmt.Sprintf("page %d", p.page)}}}
@@ -193,8 +198,13 @@ func (m *Model) applyPDFText(v pdfTextMsg) tea.Cmd {
 
 // pdfImageApplied finishes a page picture: it lands the view once the real
 // rows are known, then warms the cache for the next page in reading order.
-func (m *Model) pdfImageApplied(v documentImageMsg) tea.Cmd {
+func (m *Model) pdfImageApplied(v documentImageMsg, offset int) tea.Cmd {
 	m.pdf.loading = false
+	// A reflow keeps the same place on the page, not the same row number.
+	if m.pdf.land == pdfStay && m.pdf.reflowRows > 0 && v.image.Rows > 0 {
+		m.docOffset = offset * v.image.Rows / m.pdf.reflowRows
+	}
+	m.pdf.reflowRows = 0
 	m.landPDF()
 	m.pdf.land = pdfStay
 	if v.err != nil {
@@ -222,6 +232,12 @@ func (m *Model) cancelPDFPrefetch() {
 	}
 }
 
+func (m *Model) clearPDFNotice() {
+	if m.notice == pdfSearchNotice || m.notice == pdfReloadedNotice {
+		m.notice = ""
+	}
+}
+
 func (m *Model) landPDF() {
 	switch m.pdf.land {
 	case pdfTop:
@@ -235,9 +251,7 @@ func (m *Model) landPDF() {
 func (m *Model) pdfGo(page int, land pdfLanding) tea.Cmd {
 	p := m.pdf
 	page = max(1, min(p.info.Pages, page))
-	if m.notice == pdfSearchNotice || m.notice == pdfReloadedNotice {
-		m.notice = ""
-	}
+	m.clearPDFNotice()
 	if page == p.page {
 		p.land = land
 		m.landPDF()

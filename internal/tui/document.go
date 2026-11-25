@@ -20,6 +20,9 @@ type documentMsg struct {
 func (m *Model) clearDocument() {
 	m.cancelDocumentImages()
 	m.cancelPDFPrefetch()
+	if m.pdf != nil {
+		m.clearPDFNotice()
+	}
 	m.pdf = nil
 	m.docImages = nil
 	m.doc = nil
