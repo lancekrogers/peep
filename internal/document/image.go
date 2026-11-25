@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"image"
-	"image/color"
 	"image/png"
 	"math"
 	"net/url"
@@ -64,24 +63,17 @@ func ImageFromPNG(data []byte, columns int) (Image, error) {
 	if err != nil {
 		return Image{}, err
 	}
-	w, h := im.Bounds().Dx(), im.Bounds().Dy()
-	cols, rows := FitImage(w, h, columns)
-	return Image{PNG: data, Width: w, Height: h, Columns: cols, Rows: rows, Cells: cells(im, cols, rows, image.Rect(0, 0, cols, rows*2))}, nil
+	cols, rows := FitImage(im.Bounds().Dx(), im.Bounds().Dy(), columns)
+	return cellImage(data, im, cols, rows), nil
 }
 
-// gridImage fills exactly columns × rows cells covering boxWidth × boxHeight
-// pixels, centering the image at its own aspect ratio on the panel background.
-func gridImage(data []byte, columns, rows, boxWidth, boxHeight int) (Image, error) {
+// gridImage samples the PNG into exactly columns × rows cells.
+func gridImage(data []byte, columns, rows int) (Image, error) {
 	im, err := decodePNG(data)
 	if err != nil {
 		return Image{}, err
 	}
-	w, h := im.Bounds().Dx(), im.Bounds().Dy()
-	scale := min(float64(boxWidth)/float64(w), float64(boxHeight)/float64(h))
-	sw := min(columns, max(1, int(math.Round(float64(w)*scale*float64(columns)/float64(boxWidth)))))
-	sh := min(rows*2, max(1, int(math.Round(float64(h)*scale*float64(rows*2)/float64(boxHeight)))))
-	x, y := (columns-sw)/2, (rows*2-sh)/2
-	return Image{PNG: data, Width: w, Height: h, Columns: columns, Rows: rows, Cells: cells(im, columns, rows, image.Rect(x, y, x+sw, y+sh))}, nil
+	return cellImage(data, im, columns, rows), nil
 }
 
 func decodePNG(data []byte) (image.Image, error) {
@@ -102,18 +94,12 @@ func decodePNG(data []byte) (image.Image, error) {
 	return im, nil
 }
 
-// cells samples im into area, given in half-cell units of a cols × rows grid;
-// samples outside area show the panel background.
-func cells(im image.Image, cols, rows int, area image.Rectangle) []string {
+func cellImage(data []byte, im image.Image, cols, rows int) Image {
 	b := im.Bounds()
 	f := media.Frame{Width: cols, Height: rows * 2, RGB: make([]byte, cols*rows*6)}
 	for y := 0; y < f.Height; y++ {
 		for x := 0; x < cols; x++ {
-			var c color.Color = color.Transparent
-			if image.Pt(x, y).In(area) {
-				c = im.At(b.Min.X+(x-area.Min.X)*b.Dx()/area.Dx(), b.Min.Y+(y-area.Min.Y)*b.Dy()/area.Dy())
-			}
-			r, g, bl, a := c.RGBA()
+			r, g, bl, a := im.At(b.Min.X+x*b.Dx()/cols, b.Min.Y+y*b.Dy()/f.Height).RGBA()
 			at := (y*cols + x) * 3
 			// Composite transparency onto the document panel background.
 			f.RGB[at] = uint8((r + 23*(65535-a)/255) >> 8)
@@ -121,5 +107,5 @@ func cells(im image.Image, cols, rows int, area image.Rectangle) []string {
 			f.RGB[at+2] = uint8((bl + 45*(65535-a)/255) >> 8)
 		}
 	}
-	return render.Cells(f)
+	return Image{PNG: data, Width: b.Dx(), Height: b.Dy(), Columns: cols, Rows: rows, Cells: render.Cells(f)}
 }

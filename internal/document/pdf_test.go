@@ -138,32 +138,54 @@ func TestPDFRasterSize(t *testing.T) {
 	}
 }
 
+func TestPDFPageGrid(t *testing.T) {
+	for _, c := range []struct {
+		name                         string
+		g                            pageGeometry
+		columns, cellW, cellH        int
+		cols, rows, rasterW, rasterH int
+	}{
+		{"letter", pageGeometry{612, 792, 0}, 80, 10, 20, 80, 52, 800, 1035},
+		{"landscape", pageGeometry{792, 612, 0}, 80, 10, 20, 80, 31, 800, 618},
+		{"rotated", pageGeometry{612, 792, 90}, 80, 10, 20, 80, 31, 800, 618},
+		{"half-block cells", pageGeometry{612, 792, 0}, 80, 1, 2, 80, 52, 80, 103},
+		{"tall", pageGeometry{200, 20000, 0}, 80, 10, 20, 10, maxPageRows, 40, 4096},
+		{"wide", pageGeometry{20000, 200, 0}, 80, 10, 20, 80, 1, 800, 8},
+		{"thread", pageGeometry{1, 14400, 0}, 80, 10, 20, 1, maxPageRows, 1, 4096},
+	} {
+		cols, rows, w, h := pageGrid(c.g, c.columns, c.cellW, c.cellH)
+		if cols != c.cols || rows != c.rows || w != c.rasterW || h != c.rasterH {
+			t.Errorf("%s: %dx%d cells, %dx%d px; want %dx%d cells, %dx%d px", c.name, cols, rows, w, h, c.cols, c.rows, c.rasterW, c.rasterH)
+		}
+	}
+}
+
 func TestGridImageFillsRequestedCells(t *testing.T) {
 	im := image.NewNRGBA(image.Rect(0, 0, 20, 10))
 	for y := range 10 {
-		for x := range 20 {
+		for x := range 10 {
 			im.Set(x, y, color.NRGBA{R: 255, A: 255})
 		}
 	}
 	var b bytes.Buffer
 	png.Encode(&b, im)
-	got, err := gridImage(b.Bytes(), 10, 10, 100, 200)
+	got, err := gridImage(b.Bytes(), 30, 7)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Columns != 10 || got.Rows != 10 || len(got.Cells) != 10 {
+	if got.Columns != 30 || got.Rows != 7 || len(got.Cells) != 7 {
 		t.Fatalf("grid %dx%d with %d rows", got.Columns, got.Rows, len(got.Cells))
 	}
 	for i, row := range got.Cells {
-		if n := strings.Count(row, "▀"); n != 10 {
+		if n := strings.Count(row, "▀"); n != 30 {
 			t.Fatalf("row %d has %d cells", i, n)
 		}
 	}
-	panel := "\x1b[38;2;23;30;45m\x1b[48;2;23;30;45m▀"
-	if !strings.HasPrefix(got.Cells[0], panel) || !strings.HasPrefix(got.Cells[9], panel) || !strings.Contains(got.Cells[5], "255;0;0") {
-		t.Fatalf("image not centered vertically on the panel: %q", got.Cells)
+	red, panel := "\x1b[38;2;255;0;0m\x1b[48;2;255;0;0m▀", "\x1b[38;2;23;30;45m\x1b[48;2;23;30;45m▀"
+	if !strings.HasPrefix(got.Cells[0], red) || !strings.Contains(got.Cells[6], panel+"\x1b[0m") {
+		t.Fatalf("image does not fill the grid: %q", got.Cells[6])
 	}
-	if _, err := gridImage([]byte("broken"), 10, 10, 100, 200); err == nil {
+	if _, err := gridImage([]byte("broken"), 10, 10); err == nil {
 		t.Fatal("bad PNG accepted")
 	}
 }
@@ -209,14 +231,14 @@ func TestPDFPageCacheAndStat(t *testing.T) {
 	if again, err := p.Open(ctx, path); err != nil || again != info || fake.count("pdfinfo") != 1 {
 		t.Fatal("unchanged file was read again", err)
 	}
-	im, err := p.Page(ctx, info, 1, 40, 20, 800, 800)
-	if err != nil || im.Width != 618 || im.Height != 800 || len(im.Cells) != 20 {
+	im, err := p.Page(ctx, info, 1, 80, 10, 20)
+	if err != nil || im.Width != 800 || im.Height != 1035 || im.Columns != 80 || im.Rows != 52 || len(im.Cells) != 52 {
 		t.Fatalf("%dx%d %d rows: %v", im.Width, im.Height, len(im.Cells), err)
 	}
-	if _, err := p.Page(ctx, info, 1, 80, 40, 800, 800); err != nil || fake.count("pdftoppm") != 1 || fake.count("pdfinfo") != 2 {
+	if _, err := p.Page(ctx, info, 1, 40, 20, 40); err != nil || fake.count("pdftoppm") != 1 || fake.count("pdfinfo") != 2 {
 		t.Fatal("same raster rendered twice", err)
 	}
-	if _, err := p.Page(ctx, info, 4, 40, 20, 800, 800); err == nil || !strings.Contains(err.Error(), "out of range") {
+	if _, err := p.Page(ctx, info, 4, 80, 10, 20); err == nil || !strings.Contains(err.Error(), "out of range") {
 		t.Fatal(err)
 	}
 	if doc, err := p.Text(ctx, info, 3); err != nil || doc.Source != "page text\nwith �[31mescape�\n" {
@@ -224,7 +246,7 @@ func TestPDFPageCacheAndStat(t *testing.T) {
 	}
 
 	writeFile(t, path, "first", base.Add(time.Second))
-	if _, err := p.Page(ctx, info, 1, 40, 20, 800, 800); !errors.Is(err, ErrPDFChanged) {
+	if _, err := p.Page(ctx, info, 1, 80, 10, 20); !errors.Is(err, ErrPDFChanged) {
 		t.Fatal("stale info accepted", err)
 	}
 	same, err := p.Open(ctx, path)
@@ -238,7 +260,7 @@ func TestPDFPageCacheAndStat(t *testing.T) {
 	}
 
 	fake.onRender = func() { writeFile(t, path, "third, mid-render", base) }
-	if _, err := p.Page(ctx, changed, 2, 40, 20, 800, 800); !errors.Is(err, ErrPDFChanged) || len(p.pages) != 0 {
+	if _, err := p.Page(ctx, changed, 2, 80, 10, 20); !errors.Is(err, ErrPDFChanged) || len(p.pages) != 0 {
 		t.Fatal("render of a swapped file was cached", err)
 	}
 }
@@ -260,18 +282,18 @@ func TestPDFCacheBounds(t *testing.T) {
 		t.Fatal(err)
 	}
 	for page := 1; page <= pdfCachePages; page++ {
-		if _, err := p.Page(ctx, doc, page, 10, 5, 100, 100); err != nil {
+		if _, err := p.Page(ctx, doc, page, 10, 10, 20); err != nil {
 			t.Fatal(err)
 		}
 	}
-	p.Page(ctx, doc, 1, 10, 5, 100, 100)
-	p.Page(ctx, doc, pdfCachePages+1, 10, 5, 100, 100)
+	p.Page(ctx, doc, 1, 10, 10, 20)
+	p.Page(ctx, doc, pdfCachePages+1, 10, 10, 20)
 	renders := fake.count("pdftoppm")
-	p.Page(ctx, doc, 1, 10, 5, 100, 100)
+	p.Page(ctx, doc, 1, 10, 10, 20)
 	if fake.count("pdftoppm") != renders || len(p.pages) != pdfCachePages {
 		t.Fatal("recently used page evicted or cache overfilled")
 	}
-	p.Page(ctx, doc, 2, 10, 5, 100, 100)
+	p.Page(ctx, doc, 2, 10, 10, 20)
 	if fake.count("pdftoppm") != renders+1 {
 		t.Fatal("least recently used page survived")
 	}
@@ -377,18 +399,18 @@ func TestPDFPoppler(t *testing.T) {
 	if err != nil || info.Pages != 3 {
 		t.Fatal(info, err)
 	}
-	for _, c := range []struct{ page, boxW, boxH, w, h int }{{1, 800, 800, 618, 800}, {2, 800, 800, 800, 618}, {3, 4096, 1 << 20, 40, 4096}} {
-		im, err := p.Page(ctx, info, c.page, 80, 40, c.boxW, c.boxH)
+	for _, c := range []struct{ page, cellW, cellH, w, h, rows int }{{1, 10, 20, 800, 1035, 52}, {2, 10, 20, 800, 618, 31}, {3, 10, 20, 40, 4096, maxPageRows}, {1, 1, 2, 80, 103, 52}} {
+		im, err := p.Page(ctx, info, c.page, 80, c.cellW, c.cellH)
 		if err != nil {
 			t.Fatal(err)
 		}
 		cfg, err := png.DecodeConfig(bytes.NewReader(im.PNG))
-		if err != nil || cfg.Width != c.w || cfg.Height != c.h || len(im.Cells) != 40 {
+		if err != nil || cfg.Width != c.w || cfg.Height != c.h || im.Rows != c.rows || len(im.Cells) != c.rows {
 			t.Fatalf("page %d: %dx%d, want %dx%d (%v)", c.page, cfg.Width, cfg.Height, c.w, c.h, err)
 		}
 	}
-	first, _ := p.Page(ctx, info, 1, 80, 40, 800, 800)
-	if renders != 3 {
+	first, _ := p.Page(ctx, info, 1, 80, 10, 20)
+	if renders != 4 {
 		t.Fatalf("cached page rendered again: %d renders", renders)
 	}
 	for page, want := range map[int]string{1: "Hello alpha", 2: "Rotated beta"} {
@@ -398,21 +420,21 @@ func TestPDFPoppler(t *testing.T) {
 	}
 
 	os.WriteFile(path, testPDF("", testPage{612, 792, 0, "Changed delta and more"}), 0600)
-	if _, err := p.Page(ctx, info, 1, 80, 40, 800, 800); !errors.Is(err, ErrPDFChanged) {
+	if _, err := p.Page(ctx, info, 1, 80, 10, 20); !errors.Is(err, ErrPDFChanged) {
 		t.Fatal("rewritten file not detected", err)
 	}
 	changed, err := p.Open(ctx, path)
 	if err != nil || changed.Hash == info.Hash || changed.Pages != 1 {
 		t.Fatal(changed, err)
 	}
-	second, err := p.Page(ctx, changed, 1, 80, 40, 800, 800)
+	second, err := p.Page(ctx, changed, 1, 80, 10, 20)
 	if err != nil || bytes.Equal(first.PNG, second.PNG) {
 		t.Fatal("new content rendered the old image", err)
 	}
 
 	swap = func() { os.WriteFile(path, testPDF("", testPage{612, 792, 0, "Swapped epsilon text"}), 0600) }
 	cached := len(p.pages)
-	if _, err := p.Page(ctx, changed, 1, 40, 20, 400, 400); !errors.Is(err, ErrPDFChanged) || len(p.pages) != cached {
+	if _, err := p.Page(ctx, changed, 1, 40, 10, 20); !errors.Is(err, ErrPDFChanged) || len(p.pages) != cached {
 		t.Fatal("render of a swapped file was cached", err)
 	}
 
@@ -449,7 +471,7 @@ func TestPDFWritesNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 	for page := 1; page <= info.Pages; page++ {
-		if _, err := p.Page(ctx, info, page, 60, 30, 600, 600); err != nil {
+		if _, err := p.Page(ctx, info, page, 60, 10, 20); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := p.Text(ctx, info, page); err != nil {

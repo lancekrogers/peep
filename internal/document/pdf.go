@@ -32,6 +32,7 @@ const (
 	pdfCacheBytes = 64 << 20
 	pdfMemoPaths  = 32
 	pdfMemoPages  = 512
+	maxPageRows   = 512
 )
 
 // PDFInfo identifies one version of a PDF file. Page and Text refuse it once
@@ -144,28 +145,28 @@ func (p *PDF) Open(ctx context.Context, path string) (PDFInfo, error) {
 	return info, nil
 }
 
-// Page renders one page into exactly columns × rows cells. pixelWidth and
-// pixelHeight give the pixel size of that area; the raster fits inside it at
-// the page's aspect ratio, within the document pixel limits. Zero pixel sizes
-// assume 10 × 20 pixel cells.
-func (p *PDF) Page(ctx context.Context, info PDFInfo, page, columns, rows, pixelWidth, pixelHeight int) (Image, error) {
+// Page renders one page at columns cells wide, cellWidth × cellHeight pixels
+// per cell. The returned grid follows the page's aspect ratio; a page taller
+// than the grid cap keeps the cap and narrows instead. Zero cell sizes assume
+// 10 × 20 pixel cells.
+func (p *PDF) Page(ctx context.Context, info PDFInfo, page, columns, cellWidth, cellHeight int) (Image, error) {
 	if err := check(ctx, info, page); err != nil {
 		return Image{}, err
 	}
-	if columns < 1 || rows < 1 || columns > 1024 || rows > 512 {
-		return Image{}, fmt.Errorf("PDF preview area must be 1–1024 columns by 1–512 rows")
+	if columns < 1 || columns > 1024 {
+		return Image{}, fmt.Errorf("PDF preview width must be 1–1024 columns")
 	}
-	if pixelWidth <= 0 || pixelHeight <= 0 {
-		pixelWidth, pixelHeight = columns*10, rows*20
+	if cellWidth <= 0 || cellHeight <= 0 {
+		cellWidth, cellHeight = 10, 20
 	}
 	g, err := p.pageGeometry(ctx, info, page)
 	if err != nil {
 		return Image{}, err
 	}
-	w, h := rasterSize(g, pixelWidth, pixelHeight)
+	columns, rows, w, h := pageGrid(g, columns, cellWidth, cellHeight)
 	key := pdfRaster{pdfPage{info.Hash, page}, w, h}
 	if data := p.cached(key); data != nil {
-		return gridImage(data, columns, rows, pixelWidth, pixelHeight)
+		return gridImage(data, columns, rows)
 	}
 	out := &limitedOutput{limit: 20 << 20}
 	n := strconv.Itoa(page)
@@ -179,7 +180,7 @@ func (p *PDF) Page(ctx context.Context, info PDFInfo, page, columns, rows, pixel
 	if out.Len() == 0 {
 		return Image{}, fmt.Errorf("PDF page %d produced no image", page)
 	}
-	im, err := gridImage(out.Bytes(), columns, rows, pixelWidth, pixelHeight)
+	im, err := gridImage(out.Bytes(), columns, rows)
 	if err != nil {
 		return Image{}, err
 	}
@@ -373,6 +374,23 @@ func rasterSize(g pageGeometry, boxWidth, boxHeight int) (int, int) {
 		}
 	}
 	return rw, rh
+}
+
+// pageGrid sizes the displayed (rotated) page columns cells wide with rows
+// from its aspect ratio, capped at maxPageRows, and its raster at that width
+// within the document pixel limits.
+func pageGrid(g pageGeometry, columns, cellWidth, cellHeight int) (cols, rows, rasterW, rasterH int) {
+	w, h := g.width, g.height
+	if g.rotate%180 != 0 {
+		w, h = h, w
+	}
+	rows = max(1, int(math.Round(float64(columns*cellWidth)*h/(w*float64(cellHeight)))))
+	if rows > maxPageRows {
+		rows = maxPageRows
+		columns = max(1, min(columns, int(math.Round(float64(rows*cellHeight)*w/(h*float64(cellWidth))))))
+	}
+	rasterW, rasterH = rasterSize(g, columns*cellWidth, math.MaxInt32)
+	return columns, rows, rasterW, rasterH
 }
 
 // cappedOutput keeps the first limit bytes and discards the rest, so chatty
