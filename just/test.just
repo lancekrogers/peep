@@ -41,6 +41,7 @@ test-tui: build fixtures
     python3 scripts/document-scroll-smoke.py
     python3 scripts/browser-smoke.py
     python3 scripts/explorer-smoke.py
+    python3 scripts/pdf-smoke.py
 
 # Browser filters, sorting, symlinks, and focused text search.
 test-explorer: build
@@ -54,6 +55,10 @@ test-gif-replay: build fixtures
 test-documents: build fixtures
     python3 scripts/document-smoke.py
     python3 scripts/document-scroll-smoke.py
+
+# Real poppler PDF preview in a PTY: native PNGs, cells, change reload, no files written.
+test-pdf: build
+    python3 scripts/pdf-smoke.py
 
 # Compiled-in renderer plus native-protocol TUI checks (no mmdg installation).
 test-mermaid: build

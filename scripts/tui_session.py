@@ -19,8 +19,9 @@ ARTIFACTS = ROOT / 'tmp' / 'acceptance'
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
 class Session:
-    def __init__(self, name, *args, env_override=None):
+    def __init__(self, name, *args, env_override=None, cell_pixels=(0, 0)):
         self.name = name
+        self.cell_pixels = cell_pixels
         self.master, self.slave = pty.openpty()
         self.original = termios.tcgetattr(self.slave)
         self.resize(110, 30, notify=False)
@@ -36,7 +37,7 @@ class Session:
         self.log = bytearray()
         self.children = set()
     def resize(self, cols, rows, notify=True):
-        fcntl.ioctl(self.slave, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, 0, 0))
+        fcntl.ioctl(self.slave, termios.TIOCSWINSZ, struct.pack('HHHH', rows, cols, cols*self.cell_pixels[0], rows*self.cell_pixels[1]))
         if notify: os.kill(self.proc.pid, signal.SIGWINCH)
     def read(self, seconds=.2):
         out = bytearray()
