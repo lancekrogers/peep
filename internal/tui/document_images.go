@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -54,7 +55,7 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 	for i := 0; i <= len(m.docLayout.Lines); i++ {
 		for asset < len(m.docLayout.Assets) && m.docLayout.Assets[asset].Line == i {
 			a := m.docLayout.Assets[asset]
-			if a.Kind == "image" || a.Kind == "mermaid" {
+			if a.Kind == "image" || a.Kind == "mermaid" || a.Kind == "pdf" {
 				if a.Kind == "mermaid" && m.graphics == nil {
 					lines = append(lines, document.Line{Text: color("Mermaid source · diagram needs native graphics", muted), SourceLine: a.SourceLine})
 					asset++
@@ -66,7 +67,9 @@ func (m *Model) documentComposition() ([]document.Line, []documentSlot) {
 					slots = append(slots, documentSlot{asset, len(lines), 1, cols})
 					lines = append(lines, document.Line{Text: color(render.Safe(entry.err), muted), SourceLine: a.SourceLine})
 				} else {
-					if entry != nil && entry.image.Width > 0 {
+					if entry != nil && entry.image.Width > 0 && a.Kind == "pdf" {
+						cols, rows = entry.image.Columns, max(1, entry.image.Rows)
+					} else if entry != nil && entry.image.Width > 0 {
 						cols, rows = document.FitImage(entry.image.Width, entry.image.Height, m.documentWidth())
 					}
 					slots = append(slots, documentSlot{asset, len(lines), rows, cols})
@@ -126,6 +129,13 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 		m.docMermaid = document.NewMermaid("")
 	}
 	renderer := m.docMermaid
+	var pdf pdfRenderer
+	var pdfInfo document.PDFInfo
+	var pdfPage, pdfColumns, cellWidth, cellHeight int
+	if m.pdf != nil {
+		pdf, pdfInfo, pdfPage, pdfColumns = m.pdfRenderer(), m.pdf.info, m.pdf.page, m.pdfColumns()
+		cellWidth, cellHeight = m.pdfCellSize()
+	}
 	var cmds []tea.Cmd
 	for _, slot := range slots {
 		i := slot.index
@@ -147,8 +157,8 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 		}
 		pending := &documentImage{loading: true, width: width}
 		if entry != nil {
-			pending.image.Width = entry.image.Width
-			pending.image.Height = entry.image.Height
+			pending.image.Width, pending.image.Height = entry.image.Width, entry.image.Height
+			pending.image.Columns, pending.image.Rows = entry.image.Columns, entry.image.Rows
 		}
 		m.docImages[i] = pending
 		cmds = append(cmds, func() tea.Msg {
@@ -156,7 +166,9 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 			defer cancel()
 			var im document.Image
 			var err error
-			if len(cached) > 0 {
+			if source.Kind == "pdf" {
+				im, err = pdf.Page(child, pdfInfo, pdfPage, pdfColumns, cellWidth, cellHeight)
+			} else if len(cached) > 0 {
 				im, err = document.ImageFromPNG(cached, width)
 			} else if source.Kind == "mermaid" {
 				im, err = renderer.Render(child, source.Source, width)
@@ -175,6 +187,9 @@ func (m *Model) requestDocumentImages() tea.Cmd {
 func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 	if v.id != m.previewID || m.doc == nil {
 		return nil
+	}
+	if m.pdf != nil && errors.Is(v.err, document.ErrPDFChanged) {
+		return m.reloadPDF()
 	}
 	_, before := m.documentComposition()
 	m.docImageRevision++
@@ -216,6 +231,9 @@ func (m *Model) applyDocumentImage(v documentImageMsg) tea.Cmd {
 		break
 	}
 	m.scrollDocument(0)
+	if m.pdf != nil {
+		return tea.Batch(m.pdfImageApplied(v), m.requestDocumentImages())
+	}
 	return m.requestDocumentImages()
 }
 func (m *Model) restoreDocumentAnchor(anchor int) {

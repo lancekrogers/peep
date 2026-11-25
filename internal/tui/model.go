@@ -64,6 +64,10 @@ type Model struct {
 	docImageCancel                            context.CancelFunc
 	docImageRevision                          int
 	docMermaid                                *document.Mermaid
+	docPDF                                    pdfRenderer
+	pdf                                       *pdfView
+	pdfPrefetchCancel                         context.CancelFunc
+	cellPixels                                func() (int, int)
 	doc                                       *document.Document
 	docLayout                                 document.Layout
 	docOffset                                 int
@@ -372,6 +376,12 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.editorFinished(v)
 	case documentImageMsg:
 		return m, m.applyDocumentImage(v)
+	case pdfOpenedMsg:
+		return m, m.applyPDFOpened(v)
+	case pdfTextMsg:
+		return m, m.applyPDFText(v)
+	case pdfPrefetchMsg:
+		return m, nil
 	case documentMsg:
 		if v.id == m.previewID {
 			m.applyDocument(v)

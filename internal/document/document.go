@@ -28,6 +28,8 @@ func Kind(path string) string {
 		return "MD"
 	case ".mmd", ".mermaid":
 		return "MMD"
+	case ".pdf":
+		return "PDF"
 	case ".txt", ".log", ".go", ".rs", ".zig", ".py", ".js", ".ts", ".tsx", ".jsx", ".json", ".yaml", ".yml", ".toml", ".sh", ".c", ".h", ".cpp", ".css", ".html", ".xml", ".csv", ".ini", ".conf":
 		return "TEXT"
 	}

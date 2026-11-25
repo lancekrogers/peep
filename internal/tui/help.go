@@ -42,7 +42,8 @@ func (m *Model) helpSections() []helpSection {
 			{"Enter / f", "Focus document"}, {"↑ ↓ / j k", "Scroll focused document"},
 			{"Home / End", "Document start / end"}, {"PgUp / PgDn", "Previous / next page"},
 			{"/ or Ctrl+F", "Find in focused file"}, {"n / N", "Next / previous match"},
-			{"Ctrl+U", "Clear search while typing"}, {"R", "Source / rendered Markdown"},
+			{"Ctrl+U", "Clear search while typing"}, {"R", "Markdown source; PDF text / picture"},
+			{"← → / h l", "Previous / next PDF page"}, {"12G · 12gg", "Go to PDF page"},
 		}},
 		{"FILE ACTIONS", danger, []helpBinding{
 			{"y / Y", "Copy path / image pixels"}, {"Ctrl+G", "Open / close desktop drag window"},
