@@ -25,7 +25,7 @@ demo-pdf: build
     set -euo pipefail
     for tool in vhs pdftoppm; do command -v "$tool" >/dev/null || { echo "demo-pdf needs $tool" >&2; exit 1; }; done
     mkdir -p tmp
-    home=$(mktemp -d "$PWD/tmp/pdf-demo-XXXXXX")
+    home=$(mktemp -d "$PWD/tmp/_pdf-demo-XXXXXX")
     cp -R examples/night-shift "$home/night-shift"
     # The recorded shell sources this while hidden, so the header reads ~/night-shift.
     printf 'export HOME=%q PATH=%q PS1=%q\n' "$home" "$PWD/bin:$PATH" '$ ' > tmp/pdf-demo.env
